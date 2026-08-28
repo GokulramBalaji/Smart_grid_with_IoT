@@ -1,0 +1,701 @@
+
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+--bg:#F8F9FA;--surface:#FFFFFF;--surface2:#F2F4F6;
+--border:#E5E7EB;--border2:#D1D5DB;
+--text:#0A0A0A;--text2:#6B7280;--text3:#9CA3AF;
+--blue:#2563EB;--blue-soft:#EFF6FF;--blue-mid:#DBEAFE;
+--green:#16A34A;--green-soft:#F0FDF4;--green-mid:#DCFCE7;
+--amber:#D97706;--amber-soft:#FFFBEB;--amber-mid:#FEF3C7;
+--red:#DC2626;--red-soft:#FEF2F2;--red-mid:#FEE2E2;
+--r:#3B82F6;--y:#F59E0B;--b:#10B981;
+--radius:12px;--radius-sm:8px;--shadow:0 1px 3px rgba(0,0,0,.06),0 1px 2px rgba(0,0,0,.04)
+}
+body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI",sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.5}
+.app{display:flex;height:100vh;min-height:700px;overflow:hidden}
+
+/* SIDEBAR */
+.sidebar{width:224px;min-width:224px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;padding:0}
+.sidebar-header{padding:20px 16px 16px;border-bottom:1px solid var(--border)}
+.brand{display:flex;align-items:center;gap:10px}
+.brand-icon{width:32px;height:32px;background:var(--blue);border-radius:8px;display:flex;align-items:center;justify-content:center}
+.brand-icon svg{width:18px;height:18px;stroke:#fff;fill:none;stroke-width:2}
+.brand-name{font-size:13px;font-weight:600;color:var(--text);letter-spacing:-.01em}
+.brand-tag{font-size:10px;color:var(--text3);font-weight:400}
+.status-chip{display:flex;align-items:center;gap:5px;margin-top:12px;font-size:11px;color:var(--green);background:var(--green-soft);border:1px solid var(--green-mid);padding:4px 10px;border-radius:20px;width:fit-content}
+.status-dot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.nav{padding:12px 8px;flex:1}
+.nav-label{font-size:10px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;padding:8px 8px 4px}
+.nav-item{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:var(--radius-sm);cursor:pointer;font-size:13px;color:var(--text2);font-weight:400;transition:all .12s;margin-bottom:1px}
+.nav-item:hover{background:var(--surface2);color:var(--text)}
+.nav-item.active{background:var(--blue-soft);color:var(--blue);font-weight:500}
+.nav-item svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.8;flex-shrink:0}
+.nav-badge{margin-left:auto;font-size:10px;background:var(--red-mid);color:var(--red);padding:1px 6px;border-radius:10px;font-weight:600}
+.sidebar-footer{padding:12px;border-top:1px solid var(--border)}
+.user-row{display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:var(--radius-sm);cursor:pointer}
+.user-row:hover{background:var(--surface2)}
+.avatar{width:30px;height:30px;border-radius:50%;background:var(--blue-mid);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:var(--blue);flex-shrink:0}
+.user-name{font-size:12.5px;font-weight:500;color:var(--text)}
+.user-role{font-size:10px;color:var(--text3)}
+
+/* MAIN */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden;background:var(--bg)}
+.topbar{padding:16px 24px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.topbar-left .greeting{font-size:12px;color:var(--text3)}
+.topbar-left .page-title{font-size:18px;font-weight:600;color:var(--text);letter-spacing:-.02em}
+.topbar-right{display:flex;align-items:center;gap:8px}
+.demo-badge{font-size:11px;background:var(--amber-soft);color:var(--amber);border:1px solid var(--amber-mid);padding:4px 10px;border-radius:20px;font-weight:500}
+.icon-btn{width:34px;height:34px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text2);position:relative;transition:all .12s}
+.icon-btn:hover{background:var(--surface2)}
+.icon-btn svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.8}
+.notif-dot{position:absolute;top:6px;right:6px;width:6px;height:6px;background:var(--red);border-radius:50%;border:1.5px solid var(--surface)}
+.scroll{flex:1;overflow-y:auto;padding:20px 24px}
+
+/* KPI CARDS */
+.kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:16px}
+.kpi-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow)}
+.kpi-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.kpi-icon{width:34px;height:34px;border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center}
+.kpi-icon svg{width:17px;height:17px;stroke:currentColor;fill:none;stroke-width:1.8}
+.kpi-trend{font-size:11px;padding:2px 7px;border-radius:10px;font-weight:500}
+.kpi-val{font-size:26px;font-weight:600;letter-spacing:-.03em;color:var(--text);line-height:1}
+.kpi-unit{font-size:12px;color:var(--text3);font-weight:400;margin-left:2px}
+.kpi-label{font-size:11.5px;color:var(--text2);margin-top:4px}
+.sparkline{height:28px;margin-top:8px;overflow:hidden}
+
+/* PHASE CARDS */
+.phase-row{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:16px}
+.phase-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow)}
+.phase-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.phase-pill{font-size:11px;font-weight:600;padding:4px 10px;border-radius:20px;letter-spacing:.03em}
+.phase-r{background:#EFF6FF;color:#2563EB}
+.phase-y{background:#FFFBEB;color:#D97706}
+.phase-b{background:#F0FDF4;color:#16A34A}
+.phase-name{font-size:13px;font-weight:500;color:var(--text)}
+.phase-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.phase-metric{background:var(--surface2);border-radius:var(--radius-sm);padding:8px 10px}
+.pm-label{font-size:10px;color:var(--text3);margin-bottom:2px}
+.pm-val{font-size:15px;font-weight:600;color:var(--text);letter-spacing:-.02em}
+.pm-unit{font-size:10px;color:var(--text3);font-weight:400}
+.pf-bar{height:4px;background:var(--border);border-radius:2px;margin-top:6px;overflow:hidden}
+.pf-fill{height:100%;border-radius:2px;transition:width .4s}
+
+/* TWO COL */
+.two-col{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow)}
+.card-title{font-size:13px;font-weight:500;color:var(--text);margin-bottom:4px}
+.card-sub{font-size:11.5px;color:var(--text3);margin-bottom:14px}
+.card-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:14px}
+.seg-btns{display:flex;gap:2px;background:var(--surface2);border-radius:var(--radius-sm);padding:2px}
+.seg-btn{font-size:11px;padding:4px 8px;border-radius:6px;cursor:pointer;color:var(--text2);border:none;background:none;font-weight:400;transition:.12s}
+.seg-btn.active{background:var(--surface);color:var(--text);font-weight:500;box-shadow:0 1px 2px rgba(0,0,0,.08)}
+
+/* IMBALANCE */
+.imb-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border)}
+.imb-row:last-child{border:none}
+.imb-phase{font-size:12.5px;font-weight:500;color:var(--text)}
+.imb-val{font-size:13px;font-weight:600}
+.imb-bar-wrap{flex:1;margin:0 12px;height:6px;background:var(--surface2);border-radius:3px;overflow:hidden}
+.imb-bar{height:100%;border-radius:3px}
+
+/* ALERTS */
+.alert-item{display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)}
+.alert-item:last-child{border:none}
+.alert-icon{width:28px;height:28px;border-radius:var(--radius-sm);display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:1px}
+.alert-icon svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2}
+.alert-title{font-size:12.5px;font-weight:500;color:var(--text)}
+.alert-desc{font-size:11.5px;color:var(--text2);margin-top:2px}
+.alert-time{font-size:10.5px;color:var(--text3);margin-top:3px}
+.alert-badge{font-size:10px;padding:1px 7px;border-radius:10px;font-weight:500;white-space:nowrap}
+
+/* PF */
+.pf-row{display:grid;grid-template-columns:repeat(3,1fr) 1.2fr;gap:8px;margin-bottom:10px}
+.pf-col{text-align:center;padding:10px;background:var(--surface2);border-radius:var(--radius-sm)}
+.pf-num{font-size:18px;font-weight:600;letter-spacing:-.02em}
+.pf-lbl{font-size:10px;color:var(--text3);margin-top:2px}
+.pf-status{font-size:10px;padding:1px 7px;border-radius:10px;font-weight:500;margin-top:4px;display:inline-block}
+
+/* CHART CANVAS */
+.chart-wrap{position:relative;height:130px;margin-top:4px}
+canvas{width:100%!important;height:100%!important}
+
+/* PAGES */
+.page{display:none}.page.active{display:block}
+
+/* ANALYTICS PAGE */
+.analytics-kpi{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px}
+.an-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px;text-align:center}
+.an-num{font-size:20px;font-weight:600;color:var(--text);letter-spacing:-.02em}
+.an-label{font-size:11px;color:var(--text3);margin-top:2px}
+.an-delta{font-size:11px;margin-top:4px}
+.compare-row{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px}
+.cmp-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px}
+.cmp-label{font-size:11px;color:var(--text3);margin-bottom:8px}
+.cmp-nums{display:flex;gap:16px;align-items:baseline}
+.cmp-main{font-size:20px;font-weight:600;color:var(--text)}
+.cmp-prev{font-size:12px;color:var(--text3)}
+.cmp-diff{font-size:11px;padding:1px 7px;border-radius:10px;font-weight:500;margin-top:6px;display:inline-block}
+
+/* LOAD BALANCE */
+.lb-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}
+.lb-bar-row{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.lb-phase-label{font-size:12px;font-weight:500;width:14px;color:var(--text2)}
+.lb-bar-wrap{flex:1;height:20px;background:var(--surface2);border-radius:5px;overflow:hidden}
+.lb-bar{height:100%;border-radius:5px;display:flex;align-items:center;padding-left:8px;font-size:11px;font-weight:600;color:#fff}
+.lb-pct{font-size:12px;color:var(--text2);width:32px;text-align:right}
+
+/* ALERTS PAGE */
+.alert-filters{display:flex;gap:6px;margin-bottom:14px}
+.filter-chip{font-size:11px;padding:4px 12px;border-radius:20px;border:1px solid var(--border);cursor:pointer;color:var(--text2);background:var(--surface)}
+.filter-chip.active{background:var(--blue-soft);color:var(--blue);border-color:var(--blue-mid)}
+.alert-row{display:flex;align-items:center;gap:10px;padding:12px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--surface);margin-bottom:8px}
+.alert-row.crit{border-left:3px solid var(--red);background:var(--red-soft)}
+.alert-row.warn{border-left:3px solid var(--amber);background:var(--amber-soft)}
+.alert-row.info{border-left:3px solid var(--blue);background:var(--blue-soft)}
+
+/* HIST TABLE */
+.data-table{width:100%;border-collapse:collapse;font-size:12px}
+.data-table th{text-align:left;padding:9px 10px;font-size:10.5px;font-weight:500;color:var(--text3);border-bottom:1px solid var(--border);background:var(--surface)}
+.data-table td{padding:9px 10px;border-bottom:1px solid var(--border);color:var(--text);font-variant-numeric:tabular-nums}
+.data-table tr:hover td{background:var(--surface2)}
+</style>
+
+<h2 class="sr-only">SmartGrid Monitor — Three-Phase Energy Monitoring Dashboard with interactive navigation across Dashboard, Analytics, Load Balance, Alerts, Historical Data, and Devices pages.</h2>
+
+<div class="app">
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="sidebar-header">
+      <div class="brand">
+        <div class="brand-icon">
+          <svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+        </div>
+        <div>
+          <div class="brand-name">SmartGrid</div>
+          <div class="brand-tag">Energy Monitor</div>
+        </div>
+      </div>
+      <div class="status-chip">
+        <div class="status-dot"></div>System online
+      </div>
+    </div>
+    <div class="nav">
+      <div class="nav-label">Monitor</div>
+      <div class="nav-item active" onclick="nav('dashboard',this)">
+        <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect></svg>Dashboard
+      </div>
+      <div class="nav-item" onclick="nav('analytics',this)">
+        <svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>Energy analytics
+      </div>
+      <div class="nav-item" onclick="nav('loadbalance',this)">
+        <svg viewBox="0 0 24 24"><line x1="12" y1="2" x2="12" y2="22"></line><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"></path></svg>Load balance
+      </div>
+      <div class="nav-label">Data</div>
+      <div class="nav-item" onclick="nav('historical',this)">
+        <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="3" y1="15" x2="21" y2="15"></line><line x1="9" y1="9" x2="9" y2="21"></line></svg>Historical data
+      </div>
+      <div class="nav-item" onclick="nav('alerts',this)">
+        <svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 01-3.46 0"></path></svg>Alerts<span class="nav-badge">3</span>
+      </div>
+      <div class="nav-item" onclick="nav('devices',this)">
+        <svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"></rect><line x1="8" y1="21" x2="16" y2="21"></line><line x1="12" y1="17" x2="12" y2="21"></line></svg>Devices
+      </div>
+      <div class="nav-item">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"></circle><path d="M19.07 4.93l-1.41 1.41M4.93 4.93l1.41 1.41M12 2v2M12 20v2M20 12h2M2 12H4M16.95 16.95l1.41 1.41M4.93 19.07l1.41-1.41"></path></svg>Reports
+      </div>
+    </div>
+    <div class="sidebar-footer">
+      <div class="user-row">
+        <div class="avatar">AK</div>
+        <div>
+          <div class="user-name">Arun Kumar</div>
+          <div class="user-role">Energy Engineer</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAIN -->
+  <div class="main">
+    <div class="topbar">
+      <div class="topbar-left">
+        <div class="greeting" id="greeting">Good morning, Arun</div>
+        <div class="page-title" id="page-title">Dashboard</div>
+      </div>
+      <div class="topbar-right">
+        <div class="demo-badge">⚡ Demo mode</div>
+        <div class="icon-btn"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg></div>
+        <div class="icon-btn"><svg viewBox="0 0 24 24"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 01-3.46 0"></path></svg><div class="notif-dot"></div></div>
+      </div>
+    </div>
+
+    <div class="scroll">
+
+      <!-- DASHBOARD PAGE -->
+      <div class="page active" id="pg-dashboard">
+        <!-- KPIs -->
+        <div class="kpi-row">
+          <div class="kpi-card">
+            <div class="kpi-top">
+              <div class="kpi-icon" style="background:#EFF6FF;color:#2563EB"><svg viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path></svg></div>
+              <div class="kpi-trend" style="background:#F0FDF4;color:#16A34A">↑ 2.1%</div>
+            </div>
+            <div><span class="kpi-val" id="kpi-v">230.4</span><span class="kpi-unit">V</span></div>
+            <div class="kpi-label">Average voltage</div>
+            <div class="sparkline"><canvas id="sp1"></canvas></div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-top">
+              <div class="kpi-icon" style="background:#FFFBEB;color:#D97706"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg></div>
+              <div class="kpi-trend" style="background:#FEF2F2;color:#DC2626">↑ 5.3%</div>
+            </div>
+            <div><span class="kpi-val" id="kpi-i">16.1</span><span class="kpi-unit">A</span></div>
+            <div class="kpi-label">Total current</div>
+            <div class="sparkline"><canvas id="sp2"></canvas></div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-top">
+              <div class="kpi-icon" style="background:#F0FDF4;color:#16A34A"><svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg></div>
+              <div class="kpi-trend" style="background:#F0FDF4;color:#16A34A">↑ 3.4%</div>
+            </div>
+            <div><span class="kpi-val" id="kpi-p">3380</span><span class="kpi-unit">W</span></div>
+            <div class="kpi-label">Total active power</div>
+            <div class="sparkline"><canvas id="sp3"></canvas></div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-top">
+              <div class="kpi-icon" style="background:#F5F3FF;color:#7C3AED"><svg viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path></svg></div>
+              <div class="kpi-trend" style="background:#FFFBEB;color:#D97706">→ 0%</div>
+            </div>
+            <div><span class="kpi-val" id="kpi-e">37.7</span><span class="kpi-unit">kWh</span></div>
+            <div class="kpi-label">Total energy (today)</div>
+            <div class="sparkline"><canvas id="sp4"></canvas></div>
+          </div>
+        </div>
+
+        <!-- PHASE CARDS -->
+        <div class="phase-row">
+          <div class="phase-card">
+            <div class="phase-header">
+              <span class="phase-pill phase-r">Phase R</span>
+              <span style="font-size:11px;color:var(--text3)">L1 · PZEM-01</span>
+            </div>
+            <div class="phase-grid">
+              <div class="phase-metric"><div class="pm-label">Voltage</div><div class="pm-val" id="r-v">230.5 <span class="pm-unit">V</span></div></div>
+              <div class="phase-metric"><div class="pm-label">Current</div><div class="pm-val" id="r-i">5.2 <span class="pm-unit">A</span></div></div>
+              <div class="phase-metric"><div class="pm-label">Active power</div><div class="pm-val" id="r-p">1100 <span class="pm-unit">W</span></div></div>
+              <div class="phase-metric"><div class="pm-label">Apparent power</div><div class="pm-val" id="r-ap">1196 <span class="pm-unit">VA</span></div></div>
+              <div class="phase-metric"><div class="pm-label">Frequency</div><div class="pm-val">50.0 <span class="pm-unit">Hz</span></div></div>
+              <div class="phase-metric">
+                <div class="pm-label">Power factor</div>
+                <div class="pm-val" id="r-pf">0.92</div>
+                <div class="pf-bar"><div class="pf-fill" id="r-pfb" style="width:92%;background:#16A34A"></div></div>
+              </div>
+            </div>
+          </div>
+          <div class="phase-card">
+            <div class="phase-header">
+              <span class="phase-pill phase-y">Phase Y</span>
+              <span style="font-size:11px;color:var(--text3)">L2 · PZEM-02</span>
+            </div>
+            <div class="phase-grid">
+              <div class="phase-metric"><div class="pm-label">Voltage</div><div class="pm-val" id="y-v">228.7 <span class="pm-unit">V</span></div></div>
+              <div class="phase-metric"><div class="pm-label">Current</div><div class="pm-val" id="y-i">4.8 <span class="pm-unit">A</span></div></div>
+              <div class="phase-metric"><div class="pm-label">Active power</div><div class="pm-val" id="y-p">980 <span class="pm-unit">W</span></div></div>
+              <div class="phase-metric"><div class="pm-label">Apparent power</div><div class="pm-val" id="y-ap">1101 <span class="pm-unit">VA</span></div></div>
+              <div class="phase-metric"><div class="pm-label">Frequency</div><div class="pm-val">50.1 <span class="pm-unit">Hz</span></div></div>
+              <div class="phase-metric">
+                <div class="pm-label">Power factor</div>
+                <div class="pm-val" id="y-pf">0.89</div>
+                <div class="pf-bar"><div class="pf-fill" id="y-pfb" style="width:89%;background:#D97706"></div></div>
+              </div>
+            </div>
+          </div>
+          <div class="phase-card">
+            <div class="phase-header">
+              <span class="phase-pill phase-b">Phase B</span>
+              <span style="font-size:11px;color:var(--text3)">L3 · PZEM-03</span>
+            </div>
+            <div class="phase-grid">
+              <div class="phase-metric"><div class="pm-label">Voltage</div><div class="pm-val" id="b-v">232.1 <span class="pm-unit">V</span></div></div>
+              <div class="phase-metric"><div class="pm-label">Current</div><div class="pm-val" id="b-i">6.1 <span class="pm-unit">A</span></div></div>
+              <div class="phase-metric"><div class="pm-label">Active power</div><div class="pm-val" id="b-p">1300 <span class="pm-unit">W</span></div></div>
+              <div class="phase-metric"><div class="pm-label">Apparent power</div><div class="pm-val" id="b-ap">1383 <span class="pm-unit">VA</span></div></div>
+              <div class="phase-metric"><div class="pm-label">Frequency</div><div class="pm-val">49.9 <span class="pm-unit">Hz</span></div></div>
+              <div class="phase-metric">
+                <div class="pm-label">Power factor</div>
+                <div class="pm-val" id="b-pf">0.94</div>
+                <div class="pf-bar"><div class="pf-fill" id="b-pfb" style="width:94%;background:#16A34A"></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- CHARTS + ANALYSIS -->
+        <div class="two-col">
+          <div class="card">
+            <div class="card-header">
+              <div><div class="card-title">Real-time power</div><div class="card-sub">Live three-phase power draw</div></div>
+              <div class="seg-btns">
+                <button class="seg-btn active">1H</button>
+                <button class="seg-btn">6H</button>
+                <button class="seg-btn">24H</button>
+              </div>
+            </div>
+            <div class="chart-wrap"><canvas id="power-chart"></canvas></div>
+            <div style="display:flex;gap:12px;margin-top:8px">
+              <span style="font-size:10.5px;color:var(--text3)"><span style="display:inline-block;width:10px;height:3px;background:#3B82F6;border-radius:2px;vertical-align:middle;margin-right:4px"></span>Phase R</span>
+              <span style="font-size:10.5px;color:var(--text3)"><span style="display:inline-block;width:10px;height:3px;background:#F59E0B;border-radius:2px;vertical-align:middle;margin-right:4px"></span>Phase Y</span>
+              <span style="font-size:10.5px;color:var(--text3)"><span style="display:inline-block;width:10px;height:3px;background:#10B981;border-radius:2px;vertical-align:middle;margin-right:4px"></span>Phase B</span>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-header">
+              <div><div class="card-title">Voltage analysis</div><div class="card-sub">Imbalance: <span style="color:var(--amber);font-weight:500">0.74%</span> — Normal</div></div>
+              <div style="font-size:10px;padding:3px 8px;border-radius:10px;background:var(--green-soft);color:var(--green);font-weight:500">✓ Normal</div>
+            </div>
+            <div class="imb-row">
+              <div class="imb-phase" style="color:#2563EB;width:60px">R · 230.5V</div>
+              <div class="imb-bar-wrap"><div class="imb-bar" style="width:92%;background:#3B82F6"></div></div>
+              <div class="imb-val" style="color:#2563EB;width:36px">230.5</div>
+            </div>
+            <div class="imb-row">
+              <div class="imb-phase" style="color:#D97706;width:60px">Y · 228.7V</div>
+              <div class="imb-bar-wrap"><div class="imb-bar" style="width:91%;background:#F59E0B"></div></div>
+              <div class="imb-val" style="color:#D97706;width:36px">228.7</div>
+            </div>
+            <div class="imb-row">
+              <div class="imb-phase" style="color:#16A34A;width:60px">B · 232.1V</div>
+              <div class="imb-bar-wrap"><div class="imb-bar" style="width:93%;background:#10B981"></div></div>
+              <div class="imb-val" style="color:#16A34A;width:36px">232.1</div>
+            </div>
+            <div style="margin-top:10px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px">
+              <div style="background:var(--surface2);border-radius:var(--radius-sm);padding:8px;text-align:center"><div style="font-size:10px;color:var(--text3)">Avg</div><div style="font-size:14px;font-weight:600">230.4V</div></div>
+              <div style="background:var(--surface2);border-radius:var(--radius-sm);padding:8px;text-align:center"><div style="font-size:10px;color:var(--text3)">Min</div><div style="font-size:14px;font-weight:600">228.7V</div></div>
+              <div style="background:var(--surface2);border-radius:var(--radius-sm);padding:8px;text-align:center"><div style="font-size:10px;color:var(--text3)">Max</div><div style="font-size:14px;font-weight:600">232.1V</div></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="two-col">
+          <div class="card">
+            <div class="card-title">Power factor analysis</div>
+            <div class="card-sub">Average PF: <span style="font-weight:500;color:var(--green)">0.92 — Good</span></div>
+            <div class="pf-row">
+              <div class="pf-col"><div class="pf-num" style="color:#2563EB">0.92</div><div class="pf-lbl">Phase R</div><div class="pf-status" style="background:var(--green-soft);color:var(--green)">Good</div></div>
+              <div class="pf-col"><div class="pf-num" style="color:#D97706">0.89</div><div class="pf-lbl">Phase Y</div><div class="pf-status" style="background:var(--amber-soft);color:var(--amber)">Warning</div></div>
+              <div class="pf-col"><div class="pf-num" style="color:#16A34A">0.94</div><div class="pf-lbl">Phase B</div><div class="pf-status" style="background:var(--green-soft);color:var(--green)">Good</div></div>
+              <div class="pf-col" style="background:var(--blue-soft)"><div class="pf-num" style="color:var(--blue)">0.92</div><div class="pf-lbl">Average</div><div class="pf-status" style="background:var(--blue-mid);color:var(--blue)">Good</div></div>
+            </div>
+            <div style="font-size:11.5px;color:var(--amber);background:var(--amber-soft);border-radius:var(--radius-sm);padding:8px 10px;border-left:3px solid var(--amber)">⚠ Phase Y PF is below 0.90 — consider capacitor bank correction</div>
+          </div>
+          <div class="card">
+            <div class="card-title">Recent alerts</div>
+            <div class="card-sub">Last 24 hours</div>
+            <div class="alert-item">
+              <div class="alert-icon" style="background:var(--amber-soft);color:var(--amber)"><svg viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg></div>
+              <div style="flex:1">
+                <div class="alert-title">Phase Y power factor warning</div>
+                <div class="alert-desc">PF dropped to 0.87 — below threshold</div>
+                <div class="alert-time">12 min ago</div>
+              </div>
+              <div class="alert-badge" style="background:var(--amber-soft);color:var(--amber)">Warning</div>
+            </div>
+            <div class="alert-item">
+              <div class="alert-icon" style="background:var(--blue-soft);color:var(--blue)"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg></div>
+              <div style="flex:1">
+                <div class="alert-title">Current imbalance detected</div>
+                <div class="alert-desc">Phase B carrying 18% excess load</div>
+                <div class="alert-time">1 hr ago</div>
+              </div>
+              <div class="alert-badge" style="background:var(--blue-soft);color:var(--blue)">Info</div>
+            </div>
+            <div class="alert-item">
+              <div class="alert-icon" style="background:var(--red-soft);color:var(--red)"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg></div>
+              <div style="flex:1">
+                <div class="alert-title">High voltage — Phase B</div>
+                <div class="alert-desc">Voltage spiked to 238.4V at 09:14</div>
+                <div class="alert-time">3 hr ago</div>
+              </div>
+              <div class="alert-badge" style="background:var(--red-soft);color:var(--red)">Critical</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ANALYTICS PAGE -->
+      <div class="page" id="pg-analytics">
+        <div class="analytics-kpi">
+          <div class="an-card"><div class="an-num">37.7</div><div style="font-size:10px;color:var(--text3)">kWh</div><div class="an-label">Today's consumption</div><div class="an-delta" style="color:var(--amber)">↑ 5.2% vs yesterday</div></div>
+          <div class="an-card"><div class="an-num">248</div><div style="font-size:10px;color:var(--text3)">kWh</div><div class="an-label">This week</div><div class="an-delta" style="color:var(--green)">↓ 2.1% vs last week</div></div>
+          <div class="an-card"><div class="an-num">982</div><div style="font-size:10px;color:var(--text3)">kWh</div><div class="an-label">This month</div><div class="an-delta" style="color:var(--green)">↓ 4.3% vs last month</div></div>
+          <div class="an-card"><div class="an-num">11,240</div><div style="font-size:10px;color:var(--text3)">kWh</div><div class="an-label">This year</div><div class="an-delta" style="color:var(--amber)">↑ 1.8% vs last year</div></div>
+        </div>
+        <div class="compare-row">
+          <div class="cmp-card"><div class="cmp-label">Today vs yesterday</div><div class="cmp-nums"><span class="cmp-main">37.7 kWh</span><span class="cmp-prev">vs 35.8</span></div><div class="cmp-diff" style="background:var(--amber-soft);color:var(--amber)">+5.3% higher</div></div>
+          <div class="cmp-card"><div class="cmp-label">This week vs last week</div><div class="cmp-nums"><span class="cmp-main">248 kWh</span><span class="cmp-prev">vs 253</span></div><div class="cmp-diff" style="background:var(--green-soft);color:var(--green)">−2.1% lower ✓</div></div>
+          <div class="cmp-card"><div class="cmp-label">This month vs last month</div><div class="cmp-nums"><span class="cmp-main">982 kWh</span><span class="cmp-prev">vs 1,026</span></div><div class="cmp-diff" style="background:var(--green-soft);color:var(--green)">−4.3% lower ✓</div></div>
+        </div>
+        <div class="card" style="margin-bottom:12px">
+          <div class="card-header">
+            <div><div class="card-title">Hourly energy consumption</div><div class="card-sub">Phase-wise breakdown — today</div></div>
+            <div class="seg-btns"><button class="seg-btn active">Daily</button><button class="seg-btn">Weekly</button><button class="seg-btn">Monthly</button></div>
+          </div>
+          <div class="chart-wrap" style="height:150px"><canvas id="analytics-chart"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Energy forecast <span style="font-size:10px;font-weight:400;color:var(--text3);background:var(--surface2);padding:2px 8px;border-radius:10px;margin-left:6px">Estimated — not exact</span></div>
+          <div class="card-sub">Based on 30-day historical trend</div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
+            <div style="background:var(--surface2);border-radius:var(--radius-sm);padding:12px;border-left:3px solid var(--blue)"><div style="font-size:10px;color:var(--text3)">Tomorrow</div><div style="font-size:18px;font-weight:600;color:var(--text)">36.4 kWh</div><div style="font-size:10.5px;color:var(--text3);margin-top:2px">±1.2 kWh confidence</div></div>
+            <div style="background:var(--surface2);border-radius:var(--radius-sm);padding:12px;border-left:3px solid var(--amber)"><div style="font-size:10px;color:var(--text3)">Next week</div><div style="font-size:18px;font-weight:600;color:var(--text)">252 kWh</div><div style="font-size:10.5px;color:var(--text3);margin-top:2px">±8 kWh confidence</div></div>
+            <div style="background:var(--surface2);border-radius:var(--radius-sm);padding:12px;border-left:3px solid var(--green)"><div style="font-size:10px;color:var(--text3)">Month projection</div><div style="font-size:18px;font-weight:600;color:var(--text)">1,010 kWh</div><div style="font-size:10.5px;color:var(--text3);margin-top:2px">±30 kWh confidence</div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- LOAD BALANCE PAGE -->
+      <div class="page" id="pg-loadbalance">
+        <div style="background:var(--amber-soft);border:1px solid var(--amber-mid);border-radius:var(--radius);padding:14px 16px;margin-bottom:14px;display:flex;align-items:center;gap:10px">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#D97706" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+          <div><div style="font-size:13px;font-weight:500;color:var(--amber)">Phase B is carrying 18% more load than the average phase.</div><div style="font-size:11.5px;color:var(--amber);margin-top:2px">Consider redistributing connected loads from Phase B to Phase R or Phase Y.</div></div>
+        </div>
+        <div class="lb-grid">
+          <div class="card">
+            <div class="card-title">Power distribution</div>
+            <div class="card-sub">Active power per phase</div>
+            <div class="lb-bar-row"><div class="lb-phase-label" style="color:#2563EB">R</div><div class="lb-bar-wrap"><div class="lb-bar" style="width:33%;background:#3B82F6">1100W</div></div><div class="lb-pct">33%</div></div>
+            <div class="lb-bar-row"><div class="lb-phase-label" style="color:#D97706">Y</div><div class="lb-bar-wrap"><div class="lb-bar" style="width:29%;background:#F59E0B">980W</div></div><div class="lb-pct">29%</div></div>
+            <div class="lb-bar-row"><div class="lb-phase-label" style="color:#16A34A">B</div><div class="lb-bar-wrap"><div class="lb-bar" style="width:38%;background:#10B981">1300W</div></div><div class="lb-pct">38%</div></div>
+            <div style="margin-top:12px;display:grid;grid-template-columns:1fr 1fr;gap:8px">
+              <div style="background:var(--red-soft);border-radius:var(--radius-sm);padding:8px"><div style="font-size:10px;color:var(--text3)">Most loaded</div><div style="font-size:13px;font-weight:600;color:var(--red)">Phase B — 1300W</div></div>
+              <div style="background:var(--green-soft);border-radius:var(--radius-sm);padding:8px"><div style="font-size:10px;color:var(--text3)">Least loaded</div><div style="font-size:13px;font-weight:600;color:var(--green)">Phase Y — 980W</div></div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-title">Current distribution</div>
+            <div class="card-sub">Imbalance: <span style="color:var(--amber);font-weight:500">14.9%</span> — Warning</div>
+            <div class="lb-bar-row"><div class="lb-phase-label" style="color:#2563EB">R</div><div class="lb-bar-wrap"><div class="lb-bar" style="width:32%;background:#3B82F6">5.2A</div></div><div class="lb-pct">32%</div></div>
+            <div class="lb-bar-row"><div class="lb-phase-label" style="color:#D97706">Y</div><div class="lb-bar-wrap"><div class="lb-bar" style="width:30%;background:#F59E0B">4.8A</div></div><div class="lb-pct">30%</div></div>
+            <div class="lb-bar-row"><div class="lb-phase-label" style="color:#16A34A">B</div><div class="lb-bar-wrap"><div class="lb-bar" style="width:38%;background:#10B981">6.1A</div></div><div class="lb-pct">38%</div></div>
+            <div style="margin-top:12px;background:var(--surface2);border-radius:var(--radius-sm);padding:10px">
+              <div style="font-size:10px;color:var(--text3);margin-bottom:4px">Imbalance formula</div>
+              <div style="font-size:11.5px;color:var(--text2);font-family:monospace">|max_dev / avg| × 100 = (6.1−5.37)/5.37 × 100 = <span style="color:var(--amber);font-weight:600">14.9%</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">Balance summary</div>
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:10px">
+            <div style="text-align:center;padding:12px;background:var(--surface2);border-radius:var(--radius-sm)"><div style="font-size:20px;font-weight:600;color:var(--amber)">14.9%</div><div style="font-size:10px;color:var(--text3);margin-top:2px">Current imbalance</div></div>
+            <div style="text-align:center;padding:12px;background:var(--surface2);border-radius:var(--radius-sm)"><div style="font-size:20px;font-weight:600;color:var(--green)">0.74%</div><div style="font-size:10px;color:var(--text3);margin-top:2px">Voltage imbalance</div></div>
+            <div style="text-align:center;padding:12px;background:var(--surface2);border-radius:var(--radius-sm)"><div style="font-size:20px;font-weight:600;color:var(--text)">3380 W</div><div style="font-size:10px;color:var(--text3);margin-top:2px">Total load</div></div>
+            <div style="text-align:center;padding:12px;background:var(--surface2);border-radius:var(--radius-sm)"><div style="font-size:20px;font-weight:600;color:var(--text)">320 W</div><div style="font-size:10px;color:var(--text3);margin-top:2px">Max deviation</div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- HISTORICAL DATA -->
+      <div class="page" id="pg-historical">
+        <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">
+          <button style="font-size:12px;padding:6px 14px;border-radius:6px;border:1px solid var(--border);background:var(--surface);cursor:pointer;color:var(--text2)">📅 Date range</button>
+          <div style="display:flex;align-items:center;gap:6px;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:6px 10px;font-size:12px;color:var(--text3)">🔍 Search…</div>
+          <select style="font-size:12px;padding:6px 10px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--text2)"><option>All phases</option><option>Phase R</option><option>Phase Y</option><option>Phase B</option></select>
+          <button style="font-size:12px;padding:6px 14px;border-radius:6px;border:1px solid var(--green);background:var(--green-soft);cursor:pointer;color:var(--green);margin-left:auto">⬇ Export CSV</button>
+        </div>
+        <div class="card">
+          <div class="table-wrap" style="overflow-x:auto">
+            <table class="data-table">
+              <tr><th>Timestamp</th><th>Phase</th><th>Voltage (V)</th><th>Current (A)</th><th>Power (W)</th><th>App. Power (VA)</th><th>PF</th><th>Freq (Hz)</th><th>Energy (kWh)</th></tr>
+              <tr><td>08:45:30</td><td><span style="background:#EFF6FF;color:#2563EB;padding:2px 7px;border-radius:8px;font-size:10px;font-weight:500">R</span></td><td>230.5</td><td>5.2</td><td>1100</td><td>1196</td><td>0.92</td><td>50.0</td><td>12.5</td></tr>
+              <tr><td>08:45:30</td><td><span style="background:#FFFBEB;color:#D97706;padding:2px 7px;border-radius:8px;font-size:10px;font-weight:500">Y</span></td><td>228.7</td><td>4.8</td><td>980</td><td>1101</td><td>0.89</td><td>50.1</td><td>11.8</td></tr>
+              <tr><td>08:45:30</td><td><span style="background:#F0FDF4;color:#16A34A;padding:2px 7px;border-radius:8px;font-size:10px;font-weight:500">B</span></td><td>232.1</td><td>6.1</td><td>1300</td><td>1383</td><td>0.94</td><td>49.9</td><td>13.4</td></tr>
+              <tr><td>08:44:30</td><td><span style="background:#EFF6FF;color:#2563EB;padding:2px 7px;border-radius:8px;font-size:10px;font-weight:500">R</span></td><td>230.2</td><td>5.1</td><td>1092</td><td>1174</td><td>0.93</td><td>50.0</td><td>12.2</td></tr>
+              <tr><td>08:44:30</td><td><span style="background:#FFFBEB;color:#D97706;padding:2px 7px;border-radius:8px;font-size:10px;font-weight:500">Y</span></td><td>229.1</td><td>4.7</td><td>970</td><td>1077</td><td>0.90</td><td>50.0</td><td>11.6</td></tr>
+              <tr><td>08:44:30</td><td><span style="background:#F0FDF4;color:#16A34A;padding:2px 7px;border-radius:8px;font-size:10px;font-weight:500">B</span></td><td>231.8</td><td>6.0</td><td>1286</td><td>1391</td><td>0.93</td><td>49.9</td><td>13.1</td></tr>
+              <tr><td>08:43:30</td><td><span style="background:#EFF6FF;color:#2563EB;padding:2px 7px;border-radius:8px;font-size:10px;font-weight:500">R</span></td><td>231.0</td><td>5.3</td><td>1112</td><td>1224</td><td>0.91</td><td>50.1</td><td>12.0</td></tr>
+              <tr><td>08:43:30</td><td><span style="background:#FFFBEB;color:#D97706;padding:2px 7px;border-radius:8px;font-size:10px;font-weight:500">Y</span></td><td>228.4</td><td>4.9</td><td>990</td><td>1119</td><td>0.88</td><td>50.0</td><td>11.5</td></tr>
+            </table>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-top:12px;font-size:12px;color:var(--text3)">
+            <span>Showing 8 of 2,840 records</span>
+            <div style="display:flex;gap:4px">
+              <button style="padding:4px 10px;border:1px solid var(--border);border-radius:6px;background:var(--surface);font-size:11px;cursor:pointer;color:var(--text2)">← Prev</button>
+              <button style="padding:4px 10px;border:1px solid var(--blue);border-radius:6px;background:var(--blue-soft);font-size:11px;cursor:pointer;color:var(--blue)">Next →</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ALERTS PAGE -->
+      <div class="page" id="pg-alerts">
+        <div class="alert-filters">
+          <div class="filter-chip active">All (12)</div>
+          <div class="filter-chip">Critical (2)</div>
+          <div class="filter-chip">Warning (6)</div>
+          <div class="filter-chip">Info (4)</div>
+          <div class="filter-chip">Unacknowledged (3)</div>
+          <div style="margin-left:auto"><input placeholder="Search alerts…" style="font-size:12px;padding:5px 10px;border:1px solid var(--border);border-radius:6px;background:var(--surface)"></div>
+        </div>
+        <div class="alert-row crit">
+          <div class="alert-icon" style="background:var(--red-soft);color:var(--red)"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg></div>
+          <div style="flex:1">
+            <div style="display:flex;align-items:center;gap:6px"><div class="alert-title">High voltage — Phase B</div><div class="alert-badge" style="background:var(--red-mid);color:var(--red)">Critical</div></div>
+            <div class="alert-desc">Voltage reached 238.4V — above 235V threshold. ESP32-SMARTGRID-001</div>
+            <div class="alert-time">Today 09:14 · Phase B</div>
+          </div>
+          <button style="font-size:11px;padding:4px 10px;border:1px solid var(--border);border-radius:6px;background:var(--surface);cursor:pointer;color:var(--text2);white-space:nowrap">Acknowledge</button>
+        </div>
+        <div class="alert-row warn">
+          <div class="alert-icon" style="background:var(--amber-soft);color:var(--amber)"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg></div>
+          <div style="flex:1">
+            <div style="display:flex;align-items:center;gap:6px"><div class="alert-title">Power factor warning — Phase Y</div><div class="alert-badge" style="background:var(--amber-mid);color:var(--amber)">Warning</div></div>
+            <div class="alert-desc">PF dropped to 0.87 — below 0.90 threshold. Consider capacitor bank.</div>
+            <div class="alert-time">Today 11:32 · Phase Y</div>
+          </div>
+          <button style="font-size:11px;padding:4px 10px;border:1px solid var(--border);border-radius:6px;background:var(--surface);cursor:pointer;color:var(--text2);white-space:nowrap">Acknowledge</button>
+        </div>
+        <div class="alert-row warn">
+          <div class="alert-icon" style="background:var(--amber-soft);color:var(--amber)"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg></div>
+          <div style="flex:1">
+            <div style="display:flex;align-items:center;gap:6px"><div class="alert-title">Current imbalance — 14.9%</div><div class="alert-badge" style="background:var(--amber-mid);color:var(--amber)">Warning</div></div>
+            <div class="alert-desc">Phase B current (6.1A) significantly higher than average (5.37A).</div>
+            <div class="alert-time">Today 11:18 · All phases</div>
+          </div>
+          <button style="font-size:11px;padding:4px 10px;border:1px solid var(--border);border-radius:6px;background:var(--surface);cursor:pointer;color:var(--text2);white-space:nowrap">Acknowledge</button>
+        </div>
+        <div class="alert-row info">
+          <div class="alert-icon" style="background:var(--blue-soft);color:var(--blue)"><svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg></div>
+          <div style="flex:1">
+            <div style="display:flex;align-items:center;gap:6px"><div class="alert-title">Device came online</div><div class="alert-badge" style="background:var(--blue-mid);color:var(--blue)">Info</div></div>
+            <div class="alert-desc">ESP32-SMARTGRID-001 reconnected after 2min offline period.</div>
+            <div class="alert-time">Today 08:02 · Device</div>
+          </div>
+          <span style="font-size:10px;color:var(--green);background:var(--green-soft);padding:2px 8px;border-radius:10px;white-space:nowrap">Acknowledged</span>
+        </div>
+      </div>
+
+      <!-- DEVICES PAGE -->
+      <div class="page" id="pg-devices">
+        <div style="display:flex;justify-content:flex-end;margin-bottom:14px"><button style="font-size:12px;padding:7px 16px;border-radius:8px;border:none;background:#2563EB;color:#fff;cursor:pointer;font-weight:500">+ Add device</button></div>
+        <div class="card" style="margin-bottom:12px">
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:14px">
+            <div>
+              <div style="font-size:15px;font-weight:600;color:var(--text)">ESP32-SMARTGRID-001</div>
+              <div style="font-size:12px;color:var(--text3);margin-top:2px">Factory Floor — Panel A · Added Jan 2026</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:5px;background:var(--green-soft);border:1px solid var(--green-mid);padding:5px 12px;border-radius:20px">
+              <div class="status-dot"></div>
+              <span style="font-size:12px;color:var(--green);font-weight:500">Online</span>
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px">
+            <div style="background:var(--surface2);border-radius:var(--radius-sm);padding:10px"><div style="font-size:10px;color:var(--text3)">Last seen</div><div style="font-size:12.5px;font-weight:500;margin-top:2px">Just now</div></div>
+            <div style="background:var(--surface2);border-radius:var(--radius-sm);padding:10px"><div style="font-size:10px;color:var(--text3)">Wi-Fi signal</div><div style="font-size:12.5px;font-weight:500;margin-top:2px;color:var(--green)">−52 dBm (Good)</div></div>
+            <div style="background:var(--surface2);border-radius:var(--radius-sm);padding:10px"><div style="font-size:10px;color:var(--text3)">Readings today</div><div style="font-size:12.5px;font-weight:500;margin-top:2px">2,840</div></div>
+            <div style="background:var(--surface2);border-radius:var(--radius-sm);padding:10px"><div style="font-size:10px;color:var(--text3)">Uptime</div><div style="font-size:12.5px;font-weight:500;margin-top:2px">99.7%</div></div>
+          </div>
+          <div style="margin-bottom:10px;font-size:12px;font-weight:500;color:var(--text2)">Sensor status</div>
+          <div style="display:flex;gap:8px">
+            <div style="flex:1;background:var(--green-soft);border:1px solid var(--green-mid);border-radius:var(--radius-sm);padding:10px;text-align:center"><div style="font-size:10px;color:var(--green)">PZEM-01</div><div style="font-size:12.5px;font-weight:500;color:var(--text);margin-top:2px">Phase R</div><div style="font-size:11px;color:var(--green);margin-top:2px">● Connected</div></div>
+            <div style="flex:1;background:var(--green-soft);border:1px solid var(--green-mid);border-radius:var(--radius-sm);padding:10px;text-align:center"><div style="font-size:10px;color:var(--green)">PZEM-02</div><div style="font-size:12.5px;font-weight:500;color:var(--text);margin-top:2px">Phase Y</div><div style="font-size:11px;color:var(--green);margin-top:2px">● Connected</div></div>
+            <div style="flex:1;background:var(--green-soft);border:1px solid var(--green-mid);border-radius:var(--radius-sm);padding:10px;text-align:center"><div style="font-size:10px;color:var(--green)">PZEM-03</div><div style="font-size:12.5px;font-weight:500;color:var(--text);margin-top:2px">Phase B</div><div style="font-size:11px;color:var(--green);margin-top:2px">● Connected</div></div>
+          </div>
+          <div style="margin-top:14px;background:var(--surface2);border-radius:var(--radius-sm);padding:10px">
+            <div style="font-size:10px;color:var(--text3);margin-bottom:4px">API key</div>
+            <div style="display:flex;align-items:center;gap:8px">
+              <code style="font-size:11px;color:var(--text2);font-family:monospace;flex:1;background:var(--surface);padding:6px 10px;border-radius:5px;border:1px solid var(--border)">sgm_live_••••••••••••••••••••••••••••••••</code>
+              <button style="font-size:11px;padding:5px 10px;border:1px solid var(--border);border-radius:6px;background:var(--surface);cursor:pointer;color:var(--text2)">Reveal</button>
+              <button style="font-size:11px;padding:5px 10px;border:1px solid var(--border);border-radius:6px;background:var(--surface);cursor:pointer;color:var(--text2)">Regenerate</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<script>
+const pages={dashboard:'Dashboard',analytics:'Energy analytics',loadbalance:'Load balance',historical:'Historical data',alerts:'Alerts',devices:'Devices'};
+function nav(id,el){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('pg-'+id).classList.add('active');
+  el.classList.add('active');
+  document.getElementById('page-title').textContent=pages[id]||id;
+}
+
+// Sparklines
+function spark(id,data,color){
+  const c=document.getElementById(id);if(!c)return;
+  new Chart(c,{type:'line',data:{labels:data.map((_,i)=>i),datasets:[{data,borderColor:color,borderWidth:1.5,pointRadius:0,tension:.4,fill:true,backgroundColor:color+'18'}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{enabled:false}},scales:{x:{display:false},y:{display:false}},animation:{duration:0}}});
+}
+function rnd(base,delta){return+(base+(Math.random()-.5)*delta).toFixed(1)}
+const vHist=[228,229,230,231,229,230,232,231,230,229,230,231];
+const iHist=[15.2,15.8,16.1,16.4,15.9,16.1,16.5,16.2,16.0,15.7,16.1,16.1];
+const pHist=[3300,3350,3380,3420,3340,3380,3450,3400,3360,3310,3380,3380];
+const eHist=[30,32,34,35,35.5,36,36.5,37,37.2,37.4,37.6,37.7];
+setTimeout(()=>{
+  spark('sp1',vHist,'#2563EB');
+  spark('sp2',iHist,'#D97706');
+  spark('sp3',pHist,'#16A34A');
+  spark('sp4',eHist,'#7C3AED');
+
+  // Power chart
+  const times=[];for(let i=59;i>=0;i--)times.push(i%10===0?i+'m':'');
+  const rP=[],yP=[],bP=[];
+  for(let i=0;i<60;i++){rP.push(rnd(1100,120));yP.push(rnd(980,100));bP.push(rnd(1300,130));}
+  const pc=document.getElementById('power-chart');
+  if(pc)new Chart(pc,{type:'line',data:{labels:times,datasets:[
+    {label:'Phase R',data:rP,borderColor:'#3B82F6',borderWidth:1.5,pointRadius:0,tension:.4,fill:false},
+    {label:'Phase Y',data:yP,borderColor:'#F59E0B',borderWidth:1.5,pointRadius:0,tension:.4,fill:false},
+    {label:'Phase B',data:bP,borderColor:'#10B981',borderWidth:1.5,pointRadius:0,tension:.4,fill:false}
+  ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{mode:'index',intersect:false}},scales:{x:{display:true,ticks:{maxTicksLimit:6,font:{size:10}},grid:{display:false}},y:{display:true,ticks:{font:{size:10}},grid:{color:'#F3F4F6'}}},animation:{duration:0}}});
+
+  // Analytics chart
+  const hrs=Array.from({length:12},(_,i)=>i*2+':00');
+  const ac=document.getElementById('analytics-chart');
+  if(ac)new Chart(ac,{type:'bar',data:{labels:hrs,datasets:[
+    {label:'Phase R',data:hrs.map(()=>rnd(3.5,.8)),backgroundColor:'#3B82F680',borderRadius:3},
+    {label:'Phase Y',data:hrs.map(()=>rnd(3.1,.7)),backgroundColor:'#F59E0B80',borderRadius:3},
+    {label:'Phase B',data:hrs.map(()=>rnd(4.0,.9)),backgroundColor:'#10B98180',borderRadius:3}
+  ]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{stacked:true,ticks:{font:{size:10}},grid:{display:false}},y:{stacked:true,ticks:{font:{size:10}},grid:{color:'#F3F4F6'}}},animation:{duration:0}}});
+},200);
+
+// Live demo simulation
+let rV=230.5,rI=5.2,yV=228.7,yI=4.8,bV=232.1,bI=6.1;
+let rPF=0.92,yPF=0.89,bPF=0.94;
+function bump(v,base,range){return Math.max(base-range,Math.min(base+range,v+(Math.random()-.5)*range*.4));}
+function setEl(id,val,unit){const e=document.getElementById(id);if(e)e.innerHTML=val+(unit?` <span class="pm-unit">${unit}</span>`:'')}
+function tick(){
+  rV=bump(rV,230.5,3);rI=bump(rI,5.2,.4);
+  yV=bump(yV,228.7,3);yI=bump(yI,4.8,.4);
+  bV=bump(bV,232.1,3);bI=bump(bI,6.1,.4);
+  rPF=+Math.max(.85,Math.min(.98,rPF+(Math.random()-.5)*.01)).toFixed(2);
+  yPF=+Math.max(.82,Math.min(.95,yPF+(Math.random()-.5)*.01)).toFixed(2);
+  bPF=+Math.max(.88,Math.min(.98,bPF+(Math.random()-.5)*.01)).toFixed(2);
+  const rP=Math.round(rV*rI*rPF),yP=Math.round(yV*yI*yPF),bP=Math.round(bV*bI*bPF);
+  const rAP=Math.round(rV*rI),yAP=Math.round(yV*yI),bAP=Math.round(bV*bI);
+  setEl('r-v',rV.toFixed(1),'V');setEl('r-i',rI.toFixed(1),'A');setEl('r-p',rP,'W');setEl('r-ap',rAP,'VA');setEl('r-pf',rPF);
+  setEl('y-v',yV.toFixed(1),'V');setEl('y-i',yI.toFixed(1),'A');setEl('y-p',yP,'W');setEl('y-ap',yAP,'VA');setEl('y-pf',yPF);
+  setEl('b-v',bV.toFixed(1),'V');setEl('b-i',bI.toFixed(1),'A');setEl('b-p',bP,'W');setEl('b-ap',bAP,'VA');setEl('b-pf',bPF);
+  const rPFel=document.getElementById('r-pfb'),yPFel=document.getElementById('y-pfb'),bPFel=document.getElementById('b-pfb');
+  if(rPFel){rPFel.style.width=(rPF*100)+'%';rPFel.style.background=rPF>=.92?'#16A34A':'#D97706';}
+  if(yPFel){yPFel.style.width=(yPF*100)+'%';yPFel.style.background=yPF>=.90?'#16A34A':'#D97706';}
+  if(bPFel){bPFel.style.width=(bPF*100)+'%';bPFel.style.background=bPF>=.92?'#16A34A':'#D97706';}
+  const avg=((rV+yV+bV)/3).toFixed(1);
+  const totalI=(rI+yI+bI).toFixed(1);
+  const totalP=rP+yP+bP;
+  const kv=document.getElementById('kpi-v'),ki=document.getElementById('kpi-i'),kp=document.getElementById('kpi-p');
+  if(kv)kv.textContent=avg;if(ki)ki.textContent=totalI;if(kp)kp.textContent=totalP;
+}
+setInterval(tick,2000);
+
+// Greeting
+const hr=new Date().getHours();
+document.getElementById('greeting').textContent='Good '+(hr<12?'morning':hr<17?'afternoon':'evening')+', Arun';
+</script>
