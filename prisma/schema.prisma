@@ -1,0 +1,223 @@
+// SmartGrid Monitor — Prisma schema
+// PostgreSQL data model for a multi-device, three-phase IoT energy monitoring platform.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Enums
+// ─────────────────────────────────────────────────────────────────────────
+
+enum Role {
+  ADMIN
+  USER
+}
+
+enum DeviceStatus {
+  ONLINE
+  OFFLINE
+  PROVISIONING
+}
+
+enum Phase {
+  R
+  Y
+  B
+}
+
+enum AlertType {
+  HIGH_VOLTAGE
+  LOW_VOLTAGE
+  OVERCURRENT
+  PHASE_IMBALANCE
+  POOR_POWER_FACTOR
+  FREQUENCY_ABNORMAL
+  DEVICE_OFFLINE
+  COMMUNICATION_FAILURE
+}
+
+enum AlertSeverity {
+  INFO
+  WARNING
+  CRITICAL
+}
+
+enum AlertStatus {
+  ACTIVE
+  ACKNOWLEDGED
+  RESOLVED
+}
+
+enum SummaryPeriod {
+  DAILY
+  WEEKLY
+  MONTHLY
+  YEARLY
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Models
+// ─────────────────────────────────────────────────────────────────────────
+
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  role         Role     @default(USER)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  devices          Device[]
+  acknowledgedAlerts Alert[]            @relation("AlertAcknowledgedBy")
+  resetTokens      PasswordResetToken[]
+
+  @@index([email])
+}
+
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  token     String    @unique
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+}
+
+model Device {
+  id               String       @id @default(cuid())
+  name             String
+  deviceIdentifier String       @unique // e.g. ESP32-SMARTGRID-001
+  apiKeyHash       String // hashed device API key, verified on ingestion
+  apiKeyPrefix     String // short, safe-to-display prefix of the plaintext key
+  location         String?
+  status           DeviceStatus @default(PROVISIONING)
+  demoMode         Boolean      @default(false)
+  wifiSignal       Int? // dBm
+  lastSeenAt       DateTime?
+  firmwareVersion  String?
+
+  ownerId String
+  owner   User   @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  readings SensorReading[]
+  alerts   Alert[]
+  summaries EnergySummary[]
+  config   SystemConfig?
+
+  @@index([ownerId])
+  @@index([status])
+}
+
+model SensorReading {
+  id        String   @id @default(cuid())
+  deviceId  String
+  device    Device   @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  timestamp DateTime @default(now())
+  phase     Phase
+
+  voltage        Float // V
+  current        Float // A
+  activePower    Float // W
+  apparentPower  Float // VA — measured if available, else calculated as V*I
+  reactivePower  Float // VAR — calculated as sqrt(S^2 - P^2) when valid
+  powerFactor    Float // 0..1
+  frequency      Float // Hz
+  energy         Float // kWh, cumulative counter reported by the sensor
+  energyDelta    Float @default(0) // kWh consumed since the previous reading (duplicate-safe)
+  isCalculated   Boolean @default(false) // true if apparent/reactive power were derived, not measured
+
+  createdAt DateTime @default(now())
+
+  @@index([deviceId, timestamp])
+  @@index([deviceId, phase, timestamp])
+}
+
+model Alert {
+  id       String        @id @default(cuid())
+  deviceId String
+  device   Device        @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+
+  type     AlertType
+  severity AlertSeverity
+  status   AlertStatus   @default(ACTIVE)
+  phase    Phase?
+  message  String
+  value    Float? // the measured value that triggered the alert
+  threshold Float? // the configured threshold that was crossed
+
+  timestamp DateTime @default(now())
+
+  acknowledgedById String?
+  acknowledgedBy   User?     @relation("AlertAcknowledgedBy", fields: [acknowledgedById], references: [id])
+  acknowledgedAt   DateTime?
+
+  resolvedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([deviceId, status])
+  @@index([deviceId, timestamp])
+  @@index([severity])
+}
+
+model EnergySummary {
+  id       String        @id @default(cuid())
+  deviceId String
+  device   Device        @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+
+  period      SummaryPeriod
+  periodStart DateTime
+  periodEnd   DateTime
+
+  energyR     Float
+  energyY     Float
+  energyB     Float
+  totalEnergy Float
+
+  avgPowerFactor Float
+  avgVoltage     Float
+  avgCurrent     Float
+  peakPower      Float
+  minVoltage     Float
+  maxVoltage     Float
+
+  createdAt DateTime @default(now())
+
+  @@unique([deviceId, period, periodStart])
+  @@index([deviceId, period, periodStart])
+}
+
+model SystemConfig {
+  id       String @id @default(cuid())
+  deviceId String @unique
+  device   Device @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+
+  maxVoltage      Float @default(250)
+  minVoltage      Float @default(200)
+  maxCurrent      Float @default(32)
+  maxPower        Float @default(7000)
+  maxImbalance    Float @default(10) // %
+  minPowerFactor  Float @default(0.85)
+
+  notifyHighVoltage   Boolean @default(true)
+  notifyLowVoltage    Boolean @default(true)
+  notifyOvercurrent   Boolean @default(true)
+  notifyImbalance     Boolean @default(true)
+  notifyPoorPF        Boolean @default(true)
+  notifyDeviceOffline Boolean @default(true)
+
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+}

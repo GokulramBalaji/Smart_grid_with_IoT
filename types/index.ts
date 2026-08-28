@@ -1,0 +1,128 @@
+export type PhaseKey = "R" | "Y" | "B";
+
+export const PHASE_KEYS: PhaseKey[] = ["R", "Y", "B"];
+
+export const PHASE_LABELS: Record<PhaseKey, string> = {
+  R: "Phase R",
+  Y: "Phase Y",
+  B: "Phase B",
+};
+
+export const PHASE_COLORS: Record<PhaseKey, string> = {
+  R: "var(--phase-r)",
+  Y: "var(--phase-y)",
+  B: "var(--phase-b)",
+};
+
+export interface PhaseElectricalData {
+  voltage: number;
+  current: number;
+  activePower: number;
+  apparentPower: number;
+  reactivePower: number;
+  powerFactor: number;
+  frequency: number;
+  energy: number;
+  isCalculated?: boolean;
+}
+
+export interface DeviceIngestPayload {
+  deviceId: string;
+  timestamp: string;
+  phases: {
+    R: RawPhaseInput;
+    Y: RawPhaseInput;
+    B: RawPhaseInput;
+  };
+}
+
+export interface RawPhaseInput {
+  voltage: number;
+  current: number;
+  power: number;
+  energy: number;
+  frequency: number;
+  powerFactor: number;
+  apparentPower?: number;
+  reactivePower?: number;
+}
+
+export type AlertTypeKey =
+  | "HIGH_VOLTAGE"
+  | "LOW_VOLTAGE"
+  | "OVERCURRENT"
+  | "PHASE_IMBALANCE"
+  | "POOR_POWER_FACTOR"
+  | "FREQUENCY_ABNORMAL"
+  | "DEVICE_OFFLINE"
+  | "COMMUNICATION_FAILURE";
+
+export const ALERT_TYPE_LABELS: Record<AlertTypeKey, string> = {
+  HIGH_VOLTAGE: "High Voltage",
+  LOW_VOLTAGE: "Low Voltage",
+  OVERCURRENT: "Overcurrent",
+  PHASE_IMBALANCE: "Phase Imbalance",
+  POOR_POWER_FACTOR: "Poor Power Factor",
+  FREQUENCY_ABNORMAL: "Frequency Abnormal",
+  DEVICE_OFFLINE: "Device Offline",
+  COMMUNICATION_FAILURE: "Communication Failure",
+};
+
+export type AlertSeverityKey = "INFO" | "WARNING" | "CRITICAL";
+export type AlertStatusKey = "ACTIVE" | "ACKNOWLEDGED" | "RESOLVED";
+
+export interface AlertRecord {
+  id: string;
+  deviceId: string;
+  type: AlertTypeKey;
+  severity: AlertSeverityKey;
+  status: AlertStatusKey;
+  phase: PhaseKey | null;
+  message: string;
+  value: number | null;
+  threshold: number | null;
+  timestamp: string;
+  acknowledgedAt: string | null;
+  resolvedAt: string | null;
+  device: { name: string };
+}
+
+export type ImbalanceStatus = "normal" | "warning" | "critical";
+export type PowerFactorStatus = "excellent" | "good" | "warning" | "poor";
+export type DeviceConnectionStatus = "online" | "offline" | "provisioning";
+
+export interface DashboardSummary {
+  device: {
+    id: string;
+    name: string;
+    status: DeviceConnectionStatus;
+    lastSeenAt: string | null;
+    demoMode: boolean;
+  } | null;
+  totals: {
+    avgVoltage: number;
+    totalCurrent: number;
+    totalActivePower: number;
+    totalEnergyToday: number;
+  };
+  phases: Record<PhaseKey, PhaseElectricalData>;
+  voltage: {
+    avg: number;
+    min: number;
+    max: number;
+    imbalancePercent: number;
+    status: ImbalanceStatus;
+  };
+  current: {
+    avg: number;
+    max: number;
+    imbalancePercent: number;
+    status: ImbalanceStatus;
+  };
+  powerFactor: {
+    avg: number;
+    status: PowerFactorStatus;
+    perPhase: Record<PhaseKey, number>;
+  };
+  timestamp: string | null;
+}

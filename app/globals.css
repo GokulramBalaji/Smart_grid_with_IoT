@@ -1,0 +1,80 @@
+@import "tailwindcss";
+
+:root {
+  --background: #f5f5f7;
+  --surface: #ffffff;
+  --surface-muted: #fafafa;
+  --foreground: #1d1d1f;
+  --foreground-muted: #6e6e73;
+  --border-subtle: #e5e5e7;
+  --accent-blue: #0071e3;
+  --accent-blue-soft: #eaf3ff;
+  --accent-green: #1d9a6c;
+  --accent-green-soft: #e8f7f0;
+  --accent-amber: #b76e00;
+  --accent-amber-soft: #fdf3e3;
+  --accent-red: #d70015;
+  --accent-red-soft: #fdeceb;
+  --phase-r: #0071e3;
+  --phase-y: #b76e00;
+  --phase-b: #6e56cf;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-muted: var(--surface-muted);
+  --color-foreground: var(--foreground);
+  --color-foreground-muted: var(--foreground-muted);
+  --color-border-subtle: var(--border-subtle);
+  --color-accent-blue: var(--accent-blue);
+  --color-accent-blue-soft: var(--accent-blue-soft);
+  --color-accent-green: var(--accent-green);
+  --color-accent-green-soft: var(--accent-green-soft);
+  --color-accent-amber: var(--accent-amber);
+  --color-accent-amber-soft: var(--accent-amber-soft);
+  --color-accent-red: var(--accent-red);
+  --color-accent-red-soft: var(--accent-red-soft);
+  --color-phase-r: var(--phase-r);
+  --color-phase-y: var(--phase-y);
+  --color-phase-b: var(--phase-b);
+  --font-sans: var(--font-inter);
+}
+
+* {
+  border-color: var(--border-subtle);
+}
+
+html {
+  color-scheme: light;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-inter), -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-thumb {
+  background: #d2d2d7;
+  border-radius: 999px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.card-shadow {
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 1px 12px rgba(0, 0, 0, 0.03);
+}
+
+.card-shadow-hover {
+  transition: box-shadow 0.2s ease, transform 0.2s ease;
+}
+.card-shadow-hover:hover {
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+  transform: translateY(-1px);
+}
