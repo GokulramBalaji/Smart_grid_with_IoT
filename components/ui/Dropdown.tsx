@@ -32,6 +32,7 @@ export function Dropdown({ options, value, onChange, className }: DropdownProps)
   return (
     <div ref={ref} className={cn("relative", className)}>
       <button
+        type="button"
         onClick={() => setOpen((o) => !o)}
         className="flex h-10 items-center gap-2 rounded-xl border border-border-subtle bg-surface px-3.5 text-sm font-medium text-foreground hover:bg-surface-muted"
       >
@@ -43,6 +44,7 @@ export function Dropdown({ options, value, onChange, className }: DropdownProps)
           {options.map((opt) => (
             <button
               key={opt.value}
+              type="button"
               onClick={() => {
                 onChange(opt.value);
                 setOpen(false);

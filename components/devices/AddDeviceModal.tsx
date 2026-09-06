@@ -1,20 +1,56 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Modal } from "@/components/ui/Modal";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
+import { Dropdown } from "@/components/ui/Dropdown";
 import { Copy, CheckCircle2 } from "lucide-react";
 
-export function AddDeviceModal({ open, onClose, onCreated }: { open: boolean; onClose: () => void; onCreated: () => void }) {
+interface NodeOption {
+  id: string;
+  name: string;
+  device: { id: string } | null;
+}
+
+export function AddDeviceModal({
+  open,
+  onClose,
+  onCreated,
+  utilityNodeId,
+}: {
+  open: boolean;
+  onClose: () => void;
+  onCreated: () => void;
+  /** When provided, the device attaches to this node directly and no picker is shown. */
+  utilityNodeId?: string;
+}) {
   const [form, setForm] = useState({ name: "", deviceIdentifier: "", location: "" });
+  const [selectedNodeId, setSelectedNodeId] = useState(utilityNodeId ?? "");
+  const [nodeOptions, setNodeOptions] = useState<NodeOption[]>([]);
   const [loading, setLoading] = useState(false);
   const [apiKey, setApiKey] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (utilityNodeId || !open) return;
+    fetch("/api/utility-nodes")
+      .then((r) => r.json())
+      .then((data) => setNodeOptions((data.nodes ?? []).filter((n: NodeOption) => !n.device)));
+  }, [open, utilityNodeId]);
+
+  // Follow a fixed `utilityNodeId` prop without an Effect — adjusting state
+  // during render, per https://react.dev/learn/you-might-not-need-an-effect
+  const [prevUtilityNodeId, setPrevUtilityNodeId] = useState(utilityNodeId);
+  if (utilityNodeId !== prevUtilityNodeId) {
+    setPrevUtilityNodeId(utilityNodeId);
+    setSelectedNodeId(utilityNodeId ?? "");
+  }
 
   const reset = () => {
     setForm({ name: "", deviceIdentifier: "", location: "" });
     setApiKey(null);
+    if (!utilityNodeId) setSelectedNodeId("");
   };
 
   const handleClose = () => {
@@ -24,11 +60,15 @@ export function AddDeviceModal({ open, onClose, onCreated }: { open: boolean; on
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!selectedNodeId) {
+      toast.error("Select a utility to attach this device to.");
+      return;
+    }
     setLoading(true);
     const res = await fetch("/api/devices", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(form),
+      body: JSON.stringify({ ...form, utilityNodeId: selectedNodeId }),
     });
     const data = await res.json();
     setLoading(false);
@@ -74,6 +114,23 @@ export function AddDeviceModal({ open, onClose, onCreated }: { open: boolean; on
   return (
     <Modal open={open} onClose={handleClose} title="Add a device" description="Provision a new ESP32 + PZEM deployment">
       <form onSubmit={handleSubmit} className="space-y-4">
+        {!utilityNodeId && (
+          <div>
+            <p className="mb-1.5 text-sm font-medium text-foreground">Attach to utility</p>
+            {nodeOptions.length === 0 ? (
+              <p className="rounded-xl bg-surface-muted px-3 py-2.5 text-sm text-foreground-muted">
+                Every utility already has a device. Create a new utility first from the Utilities page.
+              </p>
+            ) : (
+              <Dropdown
+                options={nodeOptions.map((n) => ({ label: n.name, value: n.id }))}
+                value={selectedNodeId}
+                onChange={setSelectedNodeId}
+                className="w-full"
+              />
+            )}
+          </div>
+        )}
         <Input
           label="Device name"
           value={form.name}

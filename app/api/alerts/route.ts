@@ -19,7 +19,7 @@ export async function GET(req: NextRequest) {
     const page = Math.max(1, Number(params.get("page") ?? 1));
 
     const where: Prisma.AlertWhereInput = {
-      device: user.role === "ADMIN" ? undefined : { ownerId: user.id },
+      device: user.role === "ADMIN" ? undefined : { utilityNode: { ownerId: user.id } },
       ...(deviceId ? { deviceId } : {}),
       ...(status ? { status } : {}),
       ...(severity ? { severity } : {}),
@@ -38,7 +38,7 @@ export async function GET(req: NextRequest) {
       prisma.alert.count({ where }),
       prisma.alert.groupBy({
         by: ["severity"],
-        where: { device: user.role === "ADMIN" ? undefined : { ownerId: user.id }, status: "ACTIVE" },
+        where: { device: user.role === "ADMIN" ? undefined : { utilityNode: { ownerId: user.id } }, status: "ACTIVE" },
         _count: true,
       }),
     ]);

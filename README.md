@@ -197,6 +197,14 @@ the recent 7-day average, and are always labeled **"Estimated Forecast"** in the
 - Node.js 20+
 - PostgreSQL 14+ (local install, Docker, or a hosted instance)
 
+### Windows quick start
+
+Double-click **`run.bat`** in the project root. It installs dependencies, prompts you
+to fill in `.env` on first run, applies Prisma migrations, seeds demo data once, and
+starts the dev server at http://localhost:3000. Re-running it later just starts the
+server (it skips steps already done). Requires Node.js and a reachable PostgreSQL
+instance — the same prerequisites as below.
+
 ### Installation
 
 ```bash

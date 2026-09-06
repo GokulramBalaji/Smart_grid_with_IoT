@@ -7,7 +7,6 @@ import type { PhaseKey } from "../types";
 const prisma = new PrismaClient();
 
 const PHASE_KEYS: PhaseKey[] = ["R", "Y", "B"];
-const DAYS_OF_HISTORY = 30;
 const INTERVAL_MINUTES = 15;
 const MONTHS_OF_SUMMARY = 12;
 
@@ -41,71 +40,163 @@ async function main() {
 
   console.log(`Users ready: ${demoUser.email} / ${adminUser.email}`);
 
-  const { plaintext, prefix } = generateDeviceApiKey();
-  const apiKeyHash = await hashApiKey(plaintext);
+  // ── Utility tree ──────────────────────────────────────────────────────
+  // Campus Main Utility (root, has its own device)
+  //   ├─ Building A – HVAC Feeder (sub-utility, has its own device)
+  //   └─ Building B – Lighting Feeder (sub-utility, no device yet — pure
+  //                                    aggregation node, to demo the tree UI)
+  const rootNode = await upsertUtilityNode("Campus Main Utility", demoUser.id, null);
+  const buildingA = await upsertUtilityNode("Building A — HVAC Feeder", demoUser.id, rootNode.id);
+  const buildingB = await upsertUtilityNode("Building B — Lighting Feeder", demoUser.id, rootNode.id);
 
-  const existingDevice = await prisma.device.findUnique({
-    where: { deviceIdentifier: "ESP32-SMARTGRID-001" },
+  await prisma.utilityNode.update({ where: { id: rootNode.id }, data: { contractDemandKva: 10 } });
+
+  const rootDevice = await upsertDevice(rootNode.id, "Main Distribution Panel", "ESP32-SMARTGRID-001", {
+    location: "Building A - Utility Room",
+    firmwareVersion: "1.4.2",
   });
-
-  const device = existingDevice
-    ? existingDevice
-    : await prisma.device.create({
-        data: {
-          name: "Main Distribution Panel",
-          deviceIdentifier: "ESP32-SMARTGRID-001",
-          apiKeyHash,
-          apiKeyPrefix: prefix,
-          location: "Building A - Utility Room",
-          status: "ONLINE",
-          demoMode: true,
-          wifiSignal: -52,
-          firmwareVersion: "1.4.2",
-          ownerId: demoUser.id,
-          lastSeenAt: new Date(),
-        },
-      });
-
-  if (!existingDevice) {
-    console.log(`\nDevice created: ${device.name} (${device.deviceIdentifier})`);
-    console.log(`Device API key (shown once): ${plaintext}\n`);
-  }
+  const buildingADevice = await upsertDevice(buildingA.id, "HVAC Feeder Panel", "ESP32-SMARTGRID-002", {
+    location: "Building A - Rooftop HVAC",
+    firmwareVersion: "1.4.2",
+  });
 
   await prisma.systemConfig.upsert({
-    where: { deviceId: device.id },
+    where: { deviceId: rootDevice.id },
     update: {},
-    create: { deviceId: device.id },
+    create: { deviceId: rootDevice.id },
+  });
+  await prisma.systemConfig.upsert({
+    where: { deviceId: buildingADevice.id },
+    update: {},
+    create: { deviceId: buildingADevice.id, maxCurrent: 20, maxPower: 4500 },
   });
 
-  const existingReadings = await prisma.sensorReading.count({ where: { deviceId: device.id } });
-  if (existingReadings > 0) {
-    console.log(`Device already has ${existingReadings} readings — skipping historical generation.`);
+  await seedTariffPlans(rootNode.id, buildingA.id);
+
+  if (await prisma.sensorReading.count({ where: { deviceId: rootDevice.id } }) === 0) {
+    await seedHistoricalReadings(rootDevice.id, 30, { R: 1180.4, Y: 1042.7, B: 1301.9 });
   } else {
-    await seedHistoricalReadings(device.id);
+    console.log("Root device already has readings — skipping historical generation.");
   }
 
-  const existingSummaries = await prisma.energySummary.count({ where: { deviceId: device.id } });
-  if (existingSummaries === 0) {
-    await seedEnergySummaries(device.id);
+  if (await prisma.sensorReading.count({ where: { deviceId: buildingADevice.id } }) === 0) {
+    await seedHistoricalReadings(buildingADevice.id, 5, { R: 340.2, Y: 298.5, B: 361.7 });
+  } else {
+    console.log("Building A device already has readings — skipping historical generation.");
   }
 
-  const existingAlerts = await prisma.alert.count({ where: { deviceId: device.id } });
-  if (existingAlerts === 0) {
-    await seedAlerts(device.id, adminUser.id);
+  if (await prisma.energySummary.count({ where: { deviceId: rootDevice.id } }) === 0) {
+    await seedEnergySummaries(rootDevice.id);
   }
+  if (await prisma.energySummary.count({ where: { deviceId: buildingADevice.id } }) === 0) {
+    await seedEnergySummaries(buildingADevice.id);
+  }
+
+  if (await prisma.alert.count({ where: { deviceId: rootDevice.id } }) === 0) {
+    await seedAlerts(rootDevice.id, rootNode.id, adminUser.id);
+  }
+
+  await seedTicketsAndServiceRecords(rootNode.id, buildingA.id, buildingB.id, adminUser.id, demoUser.id);
+
+  await prisma.pendingDevice.upsert({
+    where: { deviceIdentifier: "ESP32-SMARTGRID-003" },
+    update: {},
+    create: {
+      deviceIdentifier: "ESP32-SMARTGRID-003",
+      wifiSsid: "Building-B-Lighting",
+      firmwareVersion: "1.4.2",
+    },
+  });
+  console.log("Discovered-but-unclaimed demo device ready (ESP32-SMARTGRID-003).");
 
   console.log("\nSeed complete.");
 }
 
-async function seedHistoricalReadings(deviceId: string) {
-  console.log(`Generating ${DAYS_OF_HISTORY} days of readings at ${INTERVAL_MINUTES}-minute resolution...`);
+async function upsertUtilityNode(name: string, ownerId: string, parentId: string | null) {
+  const existing = await prisma.utilityNode.findFirst({ where: { name, ownerId } });
+  if (existing) return existing;
+  return prisma.utilityNode.create({ data: { name, ownerId, parentId } });
+}
+
+async function upsertDevice(
+  utilityNodeId: string,
+  name: string,
+  deviceIdentifier: string,
+  extra: { location?: string; firmwareVersion?: string }
+) {
+  const existing = await prisma.device.findUnique({ where: { deviceIdentifier } });
+  if (existing) return existing;
+
+  const { plaintext, prefix } = generateDeviceApiKey();
+  const apiKeyHash = await hashApiKey(plaintext);
+
+  const device = await prisma.device.create({
+    data: {
+      name,
+      deviceIdentifier,
+      apiKeyHash,
+      apiKeyPrefix: prefix,
+      status: "ONLINE",
+      demoMode: true,
+      wifiSignal: -52,
+      utilityNodeId,
+      lastSeenAt: new Date(),
+      ...extra,
+    },
+  });
+
+  console.log(`\nDevice created: ${device.name} (${device.deviceIdentifier})`);
+  console.log(`Device API key (shown once): ${plaintext}\n`);
+
+  return device;
+}
+
+async function seedTariffPlans(rootNodeId: string, buildingANodeId: string) {
+  await prisma.tariffPlan.upsert({
+    where: { utilityNodeId: rootNodeId },
+    update: {},
+    create: {
+      utilityNodeId: rootNodeId,
+      name: "Campus Standard Flat Rate",
+      type: "FLAT",
+      currency: "USD",
+      flatRate: 0.15,
+      fixedChargeMonthly: 25,
+      demandChargePerKva: 8,
+    },
+  });
+
+  await prisma.tariffPlan.upsert({
+    where: { utilityNodeId: buildingANodeId },
+    update: {},
+    create: {
+      utilityNodeId: buildingANodeId,
+      name: "HVAC Time-of-Use Plan",
+      type: "TIME_OF_USE",
+      currency: "USD",
+      touRates: [
+        { label: "Off-Peak", startHour: 0, endHour: 7, rate: 0.09 },
+        { label: "Shoulder", startHour: 7, endHour: 17, rate: 0.14 },
+        { label: "Peak", startHour: 17, endHour: 22, rate: 0.27 },
+        { label: "Off-Peak", startHour: 22, endHour: 24, rate: 0.09 },
+      ],
+      fixedChargeMonthly: 15,
+      demandChargePerKva: 6,
+    },
+  });
+
+  console.log("Tariff plans ready (1 flat, 1 time-of-use).");
+}
+
+async function seedHistoricalReadings(deviceId: string, days: number, startEnergy: Record<PhaseKey, number>) {
+  console.log(`Generating ${days} days of readings at ${INTERVAL_MINUTES}-minute resolution for device ${deviceId}...`);
 
   const now = new Date();
-  const start = new Date(now.getTime() - DAYS_OF_HISTORY * 24 * 60 * 60 * 1000);
+  const start = new Date(now.getTime() - days * 24 * 60 * 60 * 1000);
   const intervalMs = INTERVAL_MINUTES * 60 * 1000;
   const intervalHours = INTERVAL_MINUTES / 60;
 
-  const cumulativeEnergy: Record<PhaseKey, number> = { R: 1180.4, Y: 1042.7, B: 1301.9 };
+  const cumulativeEnergy: Record<PhaseKey, number> = { ...startEnergy };
 
   const BATCH_SIZE = 1500;
   let batch: {
@@ -133,8 +224,8 @@ async function seedHistoricalReadings(deviceId: string) {
     // Inject a few realistic anomaly windows so alerts + analytics have signal.
     const daysAgo = (now.getTime() - t) / (24 * 60 * 60 * 1000);
     let anomaly: "voltage-spike" | "overcurrent" | "imbalance" | null = null;
-    if (daysAgo > 21.9 && daysAgo < 22.05) anomaly = "voltage-spike";
-    if (daysAgo > 12.9 && daysAgo < 13.1) anomaly = "overcurrent";
+    if (days >= 30 && daysAgo > 21.9 && daysAgo < 22.05) anomaly = "voltage-spike";
+    if (days >= 13 && daysAgo > 12.9 && daysAgo < 13.1) anomaly = "overcurrent";
     if (daysAgo > 3.9 && daysAgo < 4.2) anomaly = "imbalance";
 
     const snapshot = generateThreePhaseSnapshot({ hour, forceAnomaly: anomaly });
@@ -178,7 +269,7 @@ async function seedHistoricalReadings(deviceId: string) {
 }
 
 async function seedEnergySummaries(deviceId: string) {
-  console.log("Aggregating daily summaries from raw readings...");
+  console.log(`Aggregating daily summaries from raw readings for device ${deviceId}...`);
 
   const readings = await prisma.sensorReading.findMany({
     where: { deviceId },
@@ -261,7 +352,7 @@ async function seedEnergySummaries(deviceId: string) {
   console.log(`  created ${rows.length} daily summaries and ${monthlyRows.length} monthly rollups.`);
 }
 
-async function seedAlerts(deviceId: string, adminUserId: string) {
+async function seedAlerts(deviceId: string, utilityNodeId: string, adminUserId: string) {
   console.log("Seeding alert history...");
   const now = Date.now();
   const day = 24 * 60 * 60 * 1000;
@@ -341,7 +432,115 @@ async function seedAlerts(deviceId: string, adminUserId: string) {
   ];
 
   await prisma.alert.createMany({ data: alerts });
+
+  // Mirror the ingestion pipeline's behavior: a CRITICAL alert auto-opens a ticket.
+  const criticalAlert = await prisma.alert.findFirst({ where: { deviceId, severity: "CRITICAL" } });
+  if (criticalAlert) {
+    await prisma.ticket.create({
+      data: {
+        utilityNodeId,
+        title: "High Voltage — Phase B",
+        description: criticalAlert.message,
+        category: "MAINTENANCE",
+        priority: "URGENT",
+        status: "RESOLVED",
+        sourceAlertId: criticalAlert.id,
+        resolvedAt: criticalAlert.resolvedAt,
+      },
+    });
+  }
+
   console.log(`  created ${alerts.length} alerts.`);
+}
+
+async function seedTicketsAndServiceRecords(
+  rootNodeId: string,
+  buildingANodeId: string,
+  buildingBNodeId: string,
+  adminUserId: string,
+  demoUserId: string
+) {
+  const existingTickets = await prisma.ticket.count({
+    where: { utilityNodeId: { in: [rootNodeId, buildingANodeId, buildingBNodeId] }, sourceAlertId: null },
+  });
+  if (existingTickets === 0) {
+    const now = Date.now();
+    const day = 24 * 60 * 60 * 1000;
+
+    await prisma.ticket.createMany({
+      data: [
+        {
+          utilityNodeId: buildingANodeId,
+          title: "HVAC compressor short-cycling",
+          description: "Facilities reported the rooftop HVAC unit cycling on/off every few minutes during peak afternoon hours.",
+          category: "COMPLAINT",
+          priority: "HIGH",
+          status: "IN_PROGRESS",
+          createdById: demoUserId,
+          assignedTo: "Facilities — M. Chen",
+          createdAt: new Date(now - 2 * day),
+        },
+        {
+          utilityNodeId: rootNodeId,
+          title: "Quarterly PZEM sensor calibration",
+          description: "Scheduled quarterly calibration check for all three PZEM-004T sensors on the main panel.",
+          category: "MAINTENANCE",
+          priority: "MEDIUM",
+          status: "OPEN",
+          createdById: adminUserId,
+          createdAt: new Date(now - 1 * day),
+        },
+        {
+          utilityNodeId: buildingBNodeId,
+          title: "Lighting feeder inspection request",
+          description: "Requesting an inspection of the lighting sub-panel wiring before a device is provisioned here.",
+          category: "INSPECTION",
+          priority: "LOW",
+          status: "OPEN",
+          createdById: demoUserId,
+          createdAt: new Date(now - 6 * 60 * 60 * 1000),
+        },
+      ],
+    });
+    console.log("  created 3 tickets.");
+  }
+
+  const existingRecords = await prisma.serviceRecord.count({ where: { utilityNodeId: { in: [rootNodeId, buildingANodeId] } } });
+  if (existingRecords === 0) {
+    const now = Date.now();
+    const day = 24 * 60 * 60 * 1000;
+
+    await prisma.serviceRecord.createMany({
+      data: [
+        {
+          utilityNodeId: rootNodeId,
+          type: "ROUTINE",
+          description: "Routine panel inspection and terminal torque check.",
+          performedBy: "J. Alvarez (Electrical Contractor)",
+          performedAt: new Date(now - 45 * day),
+          cost: 180,
+        },
+        {
+          utilityNodeId: rootNodeId,
+          type: "CALIBRATION",
+          description: "Calibrated PZEM-004T sensors against a reference meter; all three within ±0.5% accuracy.",
+          performedBy: "SmartGrid Field Services",
+          performedAt: new Date(now - 20 * day),
+          cost: 220,
+          notes: "Next calibration due in 90 days.",
+        },
+        {
+          utilityNodeId: buildingANodeId,
+          type: "REPAIR",
+          description: "Replaced a loose neutral connection on the HVAC feeder that was causing intermittent voltage sag.",
+          performedBy: "J. Alvarez (Electrical Contractor)",
+          performedAt: new Date(now - 8 * day),
+          cost: 340,
+        },
+      ],
+    });
+    console.log("  created 3 service records.");
+  }
 }
 
 main()

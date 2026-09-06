@@ -27,7 +27,7 @@ interface AdminUser {
   email: string;
   role: "ADMIN" | "USER";
   createdAt: string;
-  _count: { devices: number };
+  _count: { utilityNodes: number };
 }
 
 const ROLE_OPTIONS = [
@@ -109,7 +109,7 @@ export function AdminClient({ currentUserId }: { currentUserId: string }) {
                 <Th>Name</Th>
                 <Th>Email</Th>
                 <Th>Role</Th>
-                <Th>Devices</Th>
+                <Th>Utilities</Th>
                 <Th>Joined</Th>
               </tr>
             </Thead>
@@ -125,7 +125,7 @@ export function AdminClient({ currentUserId }: { currentUserId: string }) {
                       <Dropdown options={ROLE_OPTIONS} value={u.role} onChange={(v) => changeRole(u.id, v)} />
                     )}
                   </Td>
-                  <Td>{u._count.devices}</Td>
+                  <Td>{u._count.utilityNodes}</Td>
                   <Td className="text-foreground-muted">{relativeTime(u.createdAt)}</Td>
                 </Tr>
               ))}

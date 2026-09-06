@@ -31,6 +31,7 @@ export function Tabs({ tabs, defaultValue, value, onChange, className }: TabsPro
       {tabs.map((tab) => (
         <button
           key={tab.value}
+          type="button"
           onClick={() => select(tab.value)}
           className={cn(
             "flex items-center gap-1.5 rounded-lg px-3.5 py-1.5 text-sm font-medium transition-all",

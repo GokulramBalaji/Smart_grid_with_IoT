@@ -33,7 +33,7 @@ export async function GET(req: NextRequest) {
   const to = params.get("to");
 
   const where: Prisma.SensorReadingWhereInput = {
-    device: user.role === "ADMIN" ? {} : { ownerId: user.id },
+    device: user.role === "ADMIN" ? {} : { utilityNode: { ownerId: user.id } },
     ...(deviceId ? { deviceId } : {}),
     ...(phase ? { phase } : {}),
     ...(from || to

@@ -87,6 +87,84 @@ export interface AlertRecord {
   device: { name: string };
 }
 
+export interface UtilityNodeDeviceSummary {
+  id: string;
+  name: string;
+  deviceIdentifier?: string;
+  status?: string;
+  lastSeenAt: string | null;
+  connectionStatus: DeviceConnectionStatus;
+}
+
+export interface UtilityNodeRecord {
+  id: string;
+  name: string;
+  parentId: string | null;
+  contractDemandKva: number | null;
+  createdAt: string;
+  device: UtilityNodeDeviceSummary | null;
+  _count: { children: number; tickets: number };
+}
+
+export type TariffType = "FLAT" | "TIME_OF_USE" | "SLAB";
+
+export interface TouRateRecord {
+  label: string;
+  startHour: number;
+  endHour: number;
+  rate: number;
+}
+
+export interface SlabRateRecord {
+  uptoKwh: number | null;
+  rate: number;
+}
+
+export interface TariffPlanRecord {
+  id: string;
+  utilityNodeId: string;
+  name: string;
+  type: TariffType;
+  currency: string;
+  flatRate: number | null;
+  touRates: TouRateRecord[] | null;
+  slabRates: SlabRateRecord[] | null;
+  fixedChargeMonthly: number;
+  demandChargePerKva: number;
+}
+
+export type TicketCategoryKey = "COMPLAINT" | "MAINTENANCE" | "INSPECTION" | "OTHER";
+export type TicketPriorityKey = "LOW" | "MEDIUM" | "HIGH" | "URGENT";
+export type TicketStatusKey = "OPEN" | "IN_PROGRESS" | "RESOLVED" | "CLOSED";
+
+export interface TicketRecord {
+  id: string;
+  utilityNodeId: string;
+  title: string;
+  description: string;
+  category: TicketCategoryKey;
+  priority: TicketPriorityKey;
+  status: TicketStatusKey;
+  assignedTo: string | null;
+  createdAt: string;
+  resolvedAt: string | null;
+  createdBy: { name: string } | null;
+  sourceAlert: { id: string; type: AlertTypeKey; severity: AlertSeverityKey } | null;
+}
+
+export type ServiceRecordTypeKey = "ROUTINE" | "REPAIR" | "INSPECTION" | "CALIBRATION" | "OTHER";
+
+export interface ServiceRecordRecord {
+  id: string;
+  utilityNodeId: string;
+  type: ServiceRecordTypeKey;
+  description: string;
+  performedBy: string;
+  performedAt: string;
+  cost: number | null;
+  notes: string | null;
+}
+
 export type ImbalanceStatus = "normal" | "warning" | "critical";
 export type PowerFactorStatus = "excellent" | "good" | "warning" | "poor";
 export type DeviceConnectionStatus = "online" | "offline" | "provisioning";

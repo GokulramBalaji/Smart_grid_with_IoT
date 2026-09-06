@@ -3,6 +3,7 @@ import type { Phase } from "@prisma/client";
 import type { PhaseKey, RawPhaseInput } from "@/types";
 import { energyDelta, calculateApparentPower, calculateReactivePower, round } from "@/lib/calculations/electrical";
 import { evaluateThresholds } from "@/lib/calculations/alerts";
+import { ALERT_TYPE_LABELS } from "@/types";
 
 const PHASE_KEYS: PhaseKey[] = ["R", "Y", "B"];
 const DUPLICATE_ALERT_WINDOW_MS = 15 * 60 * 1000; // don't re-fire the same alert within 15 minutes
@@ -87,7 +88,7 @@ export async function ingestThreePhaseReading(
       });
       if (recentDuplicate) continue;
 
-      await tx.alert.create({
+      const createdAlert = await tx.alert.create({
         data: {
           deviceId: device.id,
           type: alert.type,
@@ -99,6 +100,23 @@ export async function ingestThreePhaseReading(
           timestamp,
         },
       });
+
+      // A CRITICAL alert auto-opens a maintenance ticket on the owning
+      // utility node, so it shows up in that utility's ticket queue without
+      // anyone having to notice the alert first.
+      if (alert.severity === "CRITICAL") {
+        await tx.ticket.create({
+          data: {
+            utilityNodeId: device.utilityNodeId,
+            title: `${ALERT_TYPE_LABELS[alert.type]}${alert.phase ? ` — Phase ${alert.phase}` : ""}`,
+            description: alert.message,
+            category: "MAINTENANCE",
+            priority: "URGENT",
+            status: "OPEN",
+            sourceAlertId: createdAlert.id,
+          },
+        });
+      }
     }
   });
 

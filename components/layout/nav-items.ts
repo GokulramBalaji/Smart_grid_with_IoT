@@ -8,6 +8,7 @@ import {
   FileText,
   Settings,
   ShieldCheck,
+  Network,
   type LucideIcon,
 } from "lucide-react";
 
@@ -20,6 +21,7 @@ export interface NavItem {
 
 export const NAV_ITEMS: NavItem[] = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+  { label: "Utilities", href: "/dashboard/utilities", icon: Network },
   { label: "Energy Analytics", href: "/dashboard/analytics", icon: LineChart },
   { label: "Load Balance", href: "/dashboard/load-balance", icon: Scale },
   { label: "Historical Data", href: "/dashboard/historical-data", icon: Database },

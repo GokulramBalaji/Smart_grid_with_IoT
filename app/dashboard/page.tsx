@@ -12,7 +12,7 @@ export default async function DashboardPage() {
   if (!session?.user) redirect("/login");
 
   const device = await prisma.device.findFirst({
-    where: { ownerId: session.user.id },
+    where: { utilityNode: { ownerId: session.user.id } },
     orderBy: { createdAt: "asc" },
   });
 

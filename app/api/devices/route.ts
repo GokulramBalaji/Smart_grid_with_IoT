@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { requireUser } from "@/lib/session";
+import { requireUser, requireOwnedUtilityNode } from "@/lib/session";
 import { createDeviceSchema } from "@/lib/validations/device";
 import { generateDeviceApiKey, hashApiKey } from "@/lib/security";
 import { computeConnectionStatus } from "@/lib/calculations/dashboard";
@@ -10,9 +10,9 @@ export async function GET() {
   try {
     const user = await requireUser();
     const devices = await prisma.device.findMany({
-      where: user.role === "ADMIN" ? {} : { ownerId: user.id },
+      where: user.role === "ADMIN" ? {} : { utilityNode: { ownerId: user.id } },
       orderBy: { createdAt: "asc" },
-      include: { _count: { select: { readings: true, alerts: true } } },
+      include: { _count: { select: { readings: true, alerts: true } }, utilityNode: { select: { id: true, name: true } } },
     });
 
     return apiSuccess({
@@ -23,10 +23,19 @@ export async function GET() {
   }
 }
 
+/**
+ * Creates a device attached to a specific utility/sub-utility node. Every
+ * device belongs to exactly one node (1:1) — this is how the "mapping"
+ * between the utility tree and physical ESP32 deployments is expressed.
+ */
 export async function POST(req: NextRequest) {
   try {
-    const user = await requireUser();
     const data = createDeviceSchema.parse(await req.json());
+    const { node } = await requireOwnedUtilityNode(data.utilityNodeId);
+
+    if (node.device) {
+      return apiError("This utility already has a device attached. Detach it first.", 409);
+    }
 
     const existing = await prisma.device.findUnique({ where: { deviceIdentifier: data.deviceIdentifier } });
     if (existing) {
@@ -43,7 +52,7 @@ export async function POST(req: NextRequest) {
         location: data.location || null,
         apiKeyHash,
         apiKeyPrefix: prefix,
-        ownerId: user.id,
+        utilityNodeId: node.id,
         status: "PROVISIONING",
       },
     });

@@ -23,12 +23,19 @@ export async function requireAdmin() {
   return user;
 }
 
-/** Loads a device the current user owns (or any device, if the user is an admin). */
+/**
+ * Loads a device the current user owns (or any device, if admin). Ownership
+ * flows through the device's UtilityNode — a device is never owned directly
+ * by a user, only via the utility/sub-utility node it's attached to.
+ */
 export async function requireOwnedDevice(deviceId: string) {
   const user = await requireUser();
-  const device = await prisma.device.findUnique({ where: { id: deviceId } });
+  const device = await prisma.device.findUnique({
+    where: { id: deviceId },
+    include: { utilityNode: true },
+  });
   if (!device) throw new NotFoundError("Device not found.");
-  if (device.ownerId !== user.id && user.role !== "ADMIN") {
+  if (device.utilityNode.ownerId !== user.id && user.role !== "ADMIN") {
     throw new ForbiddenError("You do not have access to this device.");
   }
   return { user, device };
@@ -36,9 +43,10 @@ export async function requireOwnedDevice(deviceId: string) {
 
 /**
  * Resolves the device a request should act on: the explicit `deviceId` when
- * provided (with an ownership check), otherwise the current user's first
- * device. Returns `device: null` when the user has none yet, so callers can
- * render an empty state instead of erroring.
+ * provided (with an ownership check), otherwise the current user's
+ * earliest-created utility node that has a device attached. Returns
+ * `device: null` when the user has none yet, so callers can render an empty
+ * state instead of erroring.
  */
 export async function resolveRequestDevice(deviceId?: string | null) {
   const user = await requireUser();
@@ -49,8 +57,43 @@ export async function resolveRequestDevice(deviceId?: string | null) {
   }
 
   const device = await prisma.device.findFirst({
-    where: { ownerId: user.id },
+    where: { utilityNode: { ownerId: user.id } },
     orderBy: { createdAt: "asc" },
   });
   return { user, device };
+}
+
+/** Loads a utility/sub-utility node the current user owns (or any, if admin). */
+export async function requireOwnedUtilityNode(nodeId: string) {
+  const user = await requireUser();
+  const node = await prisma.utilityNode.findUnique({
+    where: { id: nodeId },
+    include: { device: true },
+  });
+  if (!node) throw new NotFoundError("Utility not found.");
+  if (node.ownerId !== user.id && user.role !== "ADMIN") {
+    throw new ForbiddenError("You do not have access to this utility.");
+  }
+  return { user, node };
+}
+
+/**
+ * Resolves the utility node a request should act on: the explicit `nodeId`
+ * when provided, otherwise the current user's earliest-created root node
+ * (no parent). Returns `node: null` when the user has none yet.
+ */
+export async function resolveRequestUtilityNode(nodeId?: string | null) {
+  const user = await requireUser();
+
+  if (nodeId) {
+    const { node } = await requireOwnedUtilityNode(nodeId);
+    return { user, node };
+  }
+
+  const node = await prisma.utilityNode.findFirst({
+    where: { ownerId: user.id, parentId: null },
+    orderBy: { createdAt: "asc" },
+    include: { device: true },
+  });
+  return { user, node };
 }

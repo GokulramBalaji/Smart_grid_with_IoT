@@ -115,6 +115,7 @@ model User {
   acknowledgedAlerts Alert[]              @relation("AlertAcknowledgedBy")
   createdTickets     Ticket[]             @relation("TicketCreatedBy")
   resetTokens        PasswordResetToken[]
+  claimedDevices     PendingDevice[]      @relation("PendingDeviceClaimedBy")
 
   @@index([email])
 }
@@ -356,4 +357,28 @@ model SystemConfig {
 
   updatedAt DateTime @updatedAt
   createdAt DateTime @default(now())
+}
+
+/// An ESP32 that has announced itself (deviceIdentifier + the Wi-Fi network
+/// it's connected to) via the shared-secret `/api/devices/announce` endpoint,
+/// but hasn't yet been claimed and mapped into a user's utility tree. The
+/// discovered Wi-Fi SSID drives the "map by network" auto-provisioning flow:
+/// claiming a pending device either creates a new utility/sub-utility named
+/// after the network, or attaches it to an existing one.
+model PendingDevice {
+  id               String  @id @default(cuid())
+  deviceIdentifier String  @unique
+  wifiSsid         String
+  firmwareVersion  String?
+
+  claimed              Boolean   @default(false)
+  claimedByUserId      String?
+  claimedBy            User?     @relation("PendingDeviceClaimedBy", fields: [claimedByUserId], references: [id])
+  claimedUtilityNodeId String?
+  claimedAt            DateTime?
+
+  lastAnnouncedAt DateTime @default(now())
+  createdAt       DateTime @default(now())
+
+  @@index([claimed, lastAnnouncedAt])
 }

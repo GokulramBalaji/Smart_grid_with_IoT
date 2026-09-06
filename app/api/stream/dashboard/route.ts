@@ -32,9 +32,17 @@ export async function GET(req: NextRequest) {
 
   const stream = new ReadableStream({
     async start(controller) {
+      const timer: { interval?: ReturnType<typeof setInterval> } = {};
+
       const send = (event: string, data: unknown) => {
         if (closed) return;
-        controller.enqueue(encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`));
+        try {
+          controller.enqueue(encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`));
+        } catch {
+          // Controller was closed by the client aborting mid-tick — stop the interval too.
+          closed = true;
+          if (timer.interval) clearInterval(timer.interval);
+        }
       };
 
       const tick = async () => {
@@ -82,11 +90,11 @@ export async function GET(req: NextRequest) {
         await tick();
       }
 
-      const interval = setInterval(tick, POLL_INTERVAL_MS);
+      timer.interval = setInterval(tick, POLL_INTERVAL_MS);
 
       req.signal.addEventListener("abort", () => {
         closed = true;
-        clearInterval(interval);
+        clearInterval(timer.interval);
         controller.close();
       });
     },

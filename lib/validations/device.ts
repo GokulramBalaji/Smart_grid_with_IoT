@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 export const createDeviceSchema = z.object({
+  utilityNodeId: z.string().min(1, "Select a utility to attach this device to"),
   name: z.string().min(2).max(80),
   deviceIdentifier: z
     .string()

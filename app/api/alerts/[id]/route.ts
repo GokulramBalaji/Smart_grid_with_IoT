@@ -14,9 +14,12 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     const user = await requireUser();
     const { status } = patchSchema.parse(await req.json());
 
-    const alert = await prisma.alert.findUnique({ where: { id }, include: { device: true } });
+    const alert = await prisma.alert.findUnique({
+      where: { id },
+      include: { device: { include: { utilityNode: true } } },
+    });
     if (!alert) throw new NotFoundError("Alert not found.");
-    if (alert.device.ownerId !== user.id && user.role !== "ADMIN") {
+    if (alert.device.utilityNode.ownerId !== user.id && user.role !== "ADMIN") {
       throw new ForbiddenError("You do not have access to this alert.");
     }
 
