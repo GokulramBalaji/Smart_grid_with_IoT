@@ -2,7 +2,7 @@ import { NextRequest } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { requireUser, requireOwnedUtilityNode, NotFoundError, ForbiddenError } from "@/lib/session";
 import { claimPendingDeviceSchema } from "@/lib/validations/discovery";
-import { generateDeviceApiKey, hashApiKey } from "@/lib/security";
+import { generateDeviceApiKey, hashApiKey, KEY_HANDOFF_TTL_MS } from "@/lib/security";
 import { apiError, apiSuccess, handleApiError } from "@/lib/api-response";
 
 /**
@@ -51,6 +51,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         firmwareVersion: pending.firmwareVersion,
         utilityNodeId,
         status: "PROVISIONING",
+        // Lets the ESP32 itself pull this same plaintext key via
+        // POST /api/devices/fetch-key instead of a human re-typing it.
+        pendingKeyPlaintext: plaintext,
+        pendingKeyExpiresAt: new Date(Date.now() + KEY_HANDOFF_TTL_MS),
       },
     });
     await prisma.systemConfig.create({ data: { deviceId: device.id } });

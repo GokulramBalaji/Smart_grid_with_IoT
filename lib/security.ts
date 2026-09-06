@@ -34,3 +34,12 @@ export async function verifyApiKey(plaintext: string, hash: string): Promise<boo
 export function generateToken(): string {
   return crypto.randomBytes(32).toString("hex");
 }
+
+/**
+ * How long a freshly (re)generated plaintext device API key stays available
+ * for the ESP32 to auto-fetch (POST /api/devices/fetch-key) before it's
+ * wiped. Generous enough for a device that only announces every ~15s to
+ * notice it's been claimed and pick up its key, but short enough that a
+ * never-collected key doesn't sit around indefinitely.
+ */
+export const KEY_HANDOFF_TTL_MS = 15 * 60 * 1000;

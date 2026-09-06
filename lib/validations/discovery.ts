@@ -10,6 +10,10 @@ export const announceDeviceSchema = z.object({
   firmwareVersion: z.string().max(32).optional(),
 });
 
+export const fetchDeviceKeySchema = z.object({
+  deviceIdentifier: z.string().min(3).max(64),
+});
+
 export const claimPendingDeviceSchema = z.discriminatedUnion("mode", [
   z.object({
     mode: z.literal("new"),
@@ -27,4 +31,5 @@ export const claimPendingDeviceSchema = z.discriminatedUnion("mode", [
 ]);
 
 export type AnnounceDeviceInput = z.infer<typeof announceDeviceSchema>;
+export type FetchDeviceKeyInput = z.infer<typeof fetchDeviceKeySchema>;
 export type ClaimPendingDeviceInput = z.infer<typeof claimPendingDeviceSchema>;

@@ -41,5 +41,9 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+
 # run.bat first-run seed marker
 .seeded
+
+# firmware secrets (Wi-Fi credentials, device identity, bootstrap secret)
+firmware/SmartGridMonitor/secrets.h

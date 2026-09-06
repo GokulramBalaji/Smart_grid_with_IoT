@@ -241,6 +241,13 @@ model Device {
   lastSeenAt       DateTime?
   firmwareVersion  String?
 
+  // One-time handoff for a freshly (re)generated plaintext API key, so the
+  // ESP32 itself can auto-fetch it (POST /api/devices/fetch-key) right after
+  // being claimed or after a key rotation, instead of requiring a human to
+  // type it in. Cleared on first pickup or once pendingKeyExpiresAt passes.
+  pendingKeyPlaintext String?
+  pendingKeyExpiresAt DateTime?
+
   utilityNodeId String      @unique
   utilityNode   UtilityNode @relation(fields: [utilityNodeId], references: [id], onDelete: Cascade)
 

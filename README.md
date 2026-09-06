@@ -273,9 +273,43 @@ Never commit a real `.env` file — only `.env.example` is tracked.
 
 ## ESP32 Integration
 
+The complete, ready-to-flash Arduino sketch for this section lives in
+[`firmware/SmartGridMonitor/`](firmware/SmartGridMonitor/) — see
+[`firmware/README.md`](firmware/README.md) for wiring, libraries, and flashing
+instructions. It implements everything documented below.
+
+### Auto-provisioning (no manual key entry)
+
+A brand-new ESP32 doesn't need an API key flashed onto it — it discovers itself onto
+a utility node through the web UI:
+
+```text
+1. POST /api/devices/announce         Bearer <DEVICE_API_SECRET>   (shared bootstrap secret)
+   { "deviceIdentifier": "ESP32-SMARTGRID-004", "wifiSsid": "Building-C-Chiller", "firmwareVersion": "1.0.0" }
+   → { "claimed": false }             (device keeps re-announcing every ~15s)
+
+2. An operator opens Utilities → sees it under "Discovered Devices" → clicks
+   "Claim & map" → creates a new utility node (pre-filled from the Wi-Fi SSID) or
+   attaches it to an existing one. This provisions a real Device row + API key.
+
+3. POST /api/devices/fetch-key         Bearer <DEVICE_API_SECRET>
+   { "deviceIdentifier": "ESP32-SMARTGRID-004" }
+   → { "apiKey": "sg_live_...", "claimed": true }   (device keeps polling every ~10s until claimed)
+
+4. The device stores that key in NVS and switches to step 5 (below) for good.
+```
+
+`fetch-key` hands back the plaintext key **exactly once** — the same one-time value
+shown to the operator in the claim modal — then immediately wipes it server-side, the
+same way a rotated key (`POST /api/devices/:id/regenerate-key`) becomes available for
+one more auto-pickup so an already-deployed device can recover from a rotation without
+being reflashed.
+
+### Sending readings
+
 Each device authenticates with a per-device API key (shown once, at creation or
-rotation, from the Devices page). The ESP32 sends one combined reading per interval
-covering all three phases:
+rotation, from the Devices page, or picked up automatically as above). The ESP32
+sends one combined reading per interval covering all three phases:
 
 ```text
 POST /api/iot/readings
@@ -351,6 +385,10 @@ POST   /api/devices/:id/regenerate-key   Rotate API key
 PATCH  /api/devices/:id/config            Update thresholds & notification toggles
 
 POST   /api/iot/readings                ESP32 ingestion (device API key auth)
+POST   /api/devices/announce             ESP32 self-announce (bootstrap secret auth)
+POST   /api/devices/fetch-key            ESP32 one-time key pickup (bootstrap secret auth)
+GET    /api/devices/pending               List discovered-but-unmapped devices
+POST   /api/devices/pending/:id/claim     Map a discovered device onto the utility tree
 POST   /api/demo/tick                    Advance Demo Mode by one reading
 POST   /api/demo/toggle                  Enable/disable Demo Mode for a device
 
