@@ -33,7 +33,7 @@ if exist "%SCRIPT_DIR%\Project_files\Sem-7-smart-grid-project-main" (
     set "PARENT_DIR=%CD%"
 ) else (
     echo [ERROR] Could not locate the Project_files directory!
-    echo Please make sure this .bat file is in the folder containing 'Project_files' or inside 'Project_files'.
+    echo Please make sure this .bat file is placed in the folder containing 'Project_files' or inside 'Project_files'.
     echo ====================================================================
     pause
     exit /b 1
@@ -128,13 +128,14 @@ if "!COMMIT_MSG!"=="" set "COMMIT_MSG=Add Smart Grid with IoT project files and 
 
 git commit -m "!COMMIT_MSG!"
 if errorlevel 1 (
-    echo [INFO] No changes detected (repository is already up to date).
-) else (
-    echo.
-    echo [*] Pushing commits to GitHub on branch 'main'...
-    git push -u origin main
-    if errorlevel 1 goto :git_error
+    echo [INFO] No changes detected - repository is already up to date.
+    goto :success
 )
+
+echo.
+echo [*] Pushing commits to GitHub on branch 'main'...
+git push -u origin main
+if errorlevel 1 goto :git_error
 
 goto :success
 
@@ -181,13 +182,14 @@ if "!COMMIT_MSG!"=="" set "COMMIT_MSG=Update Smart Grid with IoT project files"
 
 git commit -m "!COMMIT_MSG!"
 if errorlevel 1 (
-    echo [INFO] No changes detected (repository is already up to date).
-) else (
-    echo.
-    echo [*] Pushing commits to GitHub on branch 'main'...
-    git push -u origin main
-    if errorlevel 1 goto :git_error
+    echo [INFO] No changes detected - repository is already up to date.
+    goto :success
 )
+
+echo.
+echo [*] Pushing commits to GitHub on branch 'main'...
+git push -u origin main
+if errorlevel 1 goto :git_error
 
 goto :success
 
