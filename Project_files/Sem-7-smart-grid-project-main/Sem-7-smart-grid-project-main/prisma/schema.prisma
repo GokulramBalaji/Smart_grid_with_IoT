@@ -1,0 +1,393 @@
+// SmartGrid Monitor — Prisma schema
+// PostgreSQL data model for a multi-utility, tree-structured, three-phase IoT
+// energy monitoring platform. Each UtilityNode (utility or sub-utility, at
+// any depth) may own one ESP32 + 3xPZEM-004T Device.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Enums
+// ─────────────────────────────────────────────────────────────────────────
+
+enum Role {
+  ADMIN
+  USER
+}
+
+enum DeviceStatus {
+  ONLINE
+  OFFLINE
+  PROVISIONING
+}
+
+enum Phase {
+  R
+  Y
+  B
+}
+
+enum AlertType {
+  HIGH_VOLTAGE
+  LOW_VOLTAGE
+  OVERCURRENT
+  PHASE_IMBALANCE
+  POOR_POWER_FACTOR
+  FREQUENCY_ABNORMAL
+  DEVICE_OFFLINE
+  COMMUNICATION_FAILURE
+}
+
+enum AlertSeverity {
+  INFO
+  WARNING
+  CRITICAL
+}
+
+enum AlertStatus {
+  ACTIVE
+  ACKNOWLEDGED
+  RESOLVED
+}
+
+enum SummaryPeriod {
+  DAILY
+  WEEKLY
+  MONTHLY
+  YEARLY
+}
+
+enum TariffType {
+  FLAT
+  TIME_OF_USE
+  SLAB
+}
+
+enum TicketCategory {
+  COMPLAINT
+  MAINTENANCE
+  INSPECTION
+  OTHER
+}
+
+enum TicketPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
+enum ServiceRecordType {
+  ROUTINE
+  REPAIR
+  INSPECTION
+  CALIBRATION
+  OTHER
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Models
+// ─────────────────────────────────────────────────────────────────────────
+
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  role         Role     @default(USER)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  utilityNodes       UtilityNode[]
+  acknowledgedAlerts Alert[]              @relation("AlertAcknowledgedBy")
+  createdTickets     Ticket[]             @relation("TicketCreatedBy")
+  resetTokens        PasswordResetToken[]
+  claimedDevices     PendingDevice[]      @relation("PendingDeviceClaimedBy")
+
+  @@index([email])
+}
+
+/// A node in the utility / sub-utility hierarchy (unlimited depth). Each node
+/// optionally owns one ESP32 + 3xPZEM-004T device; a node without a device is
+/// a pure aggregation point (e.g. "Campus" over several buildings).
+model UtilityNode {
+  id      String @id @default(cuid())
+  name    String
+  ownerId String
+  owner   User   @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  parentId String?
+  parent   UtilityNode?  @relation("UtilityTree", fields: [parentId], references: [id], onDelete: Cascade)
+  children UtilityNode[] @relation("UtilityTree")
+
+  device            Device?
+  tariffPlan        TariffPlan?
+  contractDemandKva Float?
+
+  tickets        Ticket[]
+  serviceRecords ServiceRecord[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([ownerId])
+  @@index([parentId])
+}
+
+/// Billing configuration for one utility node. Rate shapes for TIME_OF_USE
+/// and SLAB are stored as JSON since their structure varies by plan type —
+/// validated in lib/validations, not enforced at the DB layer.
+model TariffPlan {
+  id            String      @id @default(cuid())
+  utilityNodeId String      @unique
+  utilityNode   UtilityNode @relation(fields: [utilityNodeId], references: [id], onDelete: Cascade)
+
+  name     String
+  type     TariffType @default(FLAT)
+  currency String     @default("USD")
+
+  flatRate  Float? // $/kWh, used when type = FLAT
+  touRates  Json? // TIME_OF_USE: [{ startHour, endHour, rate, label }]
+  slabRates Json? // SLAB: [{ uptoKwh, rate }] ascending, last slab has uptoKwh = null
+
+  fixedChargeMonthly Float @default(0) // flat monthly service charge
+  demandChargePerKva Float @default(0) // $ per kVA of peak demand
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+/// Complaint / maintenance ticket, scoped to a single utility node. May be
+/// auto-opened from a CRITICAL alert (sourceAlertId) or raised manually.
+model Ticket {
+  id            String      @id @default(cuid())
+  utilityNodeId String
+  utilityNode   UtilityNode @relation(fields: [utilityNodeId], references: [id], onDelete: Cascade)
+
+  title       String
+  description String
+  category    TicketCategory @default(COMPLAINT)
+  priority    TicketPriority @default(MEDIUM)
+  status      TicketStatus   @default(OPEN)
+
+  sourceAlertId String?
+  sourceAlert   Alert?  @relation(fields: [sourceAlertId], references: [id])
+
+  createdById String?
+  createdBy   User?   @relation("TicketCreatedBy", fields: [createdById], references: [id])
+  assignedTo  String?
+
+  resolvedAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  @@index([utilityNodeId, status])
+  @@index([sourceAlertId])
+}
+
+/// Maintenance / service history log for a utility node.
+model ServiceRecord {
+  id            String      @id @default(cuid())
+  utilityNodeId String
+  utilityNode   UtilityNode @relation(fields: [utilityNodeId], references: [id], onDelete: Cascade)
+
+  type        ServiceRecordType @default(ROUTINE)
+  description String
+  performedBy String
+  performedAt DateTime          @default(now())
+  cost        Float?
+  notes       String?
+
+  createdAt DateTime @default(now())
+
+  @@index([utilityNodeId, performedAt])
+}
+
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  token     String    @unique
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+}
+
+model Device {
+  id               String       @id @default(cuid())
+  name             String
+  deviceIdentifier String       @unique // e.g. ESP32-SMARTGRID-001
+  apiKeyHash       String // hashed device API key, verified on ingestion
+  apiKeyPrefix     String // short, safe-to-display prefix of the plaintext key
+  location         String?
+  status           DeviceStatus @default(PROVISIONING)
+  demoMode         Boolean      @default(false)
+  wifiSignal       Int? // dBm
+  lastSeenAt       DateTime?
+  firmwareVersion  String?
+  ipAddress        String?
+  pollInterval     Int?         @default(10) // seconds between polls when mapped by IP
+
+  // One-time handoff for a freshly (re)generated plaintext API key, so the
+  // ESP32 itself can auto-fetch it (POST /api/devices/fetch-key) right after
+  // being claimed or after a key rotation, instead of requiring a human to
+  // type it in. Cleared on first pickup or once pendingKeyExpiresAt passes.
+  pendingKeyPlaintext String?
+  pendingKeyExpiresAt DateTime?
+
+  utilityNodeId String      @unique
+  utilityNode   UtilityNode @relation(fields: [utilityNodeId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  readings  SensorReading[]
+  alerts    Alert[]
+  summaries EnergySummary[]
+  config    SystemConfig?
+
+  @@index([utilityNodeId])
+  @@index([status])
+}
+
+model SensorReading {
+  id        String   @id @default(cuid())
+  deviceId  String
+  device    Device   @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  timestamp DateTime @default(now())
+  phase     Phase
+
+  voltage       Float // V
+  current       Float // A
+  activePower   Float // W
+  apparentPower Float // VA — measured if available, else calculated as V*I
+  reactivePower Float // VAR — calculated as sqrt(S^2 - P^2) when valid
+  powerFactor   Float // 0..1
+  frequency     Float // Hz
+  energy        Float // kWh, cumulative counter reported by the sensor
+  energyDelta   Float   @default(0) // kWh consumed since the previous reading (duplicate-safe)
+  isCalculated  Boolean @default(false) // true if apparent/reactive power were derived, not measured
+
+  createdAt DateTime @default(now())
+
+  @@index([deviceId, timestamp])
+  @@index([deviceId, phase, timestamp])
+}
+
+model Alert {
+  id       String @id @default(cuid())
+  deviceId String
+  device   Device @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+
+  type      AlertType
+  severity  AlertSeverity
+  status    AlertStatus   @default(ACTIVE)
+  phase     Phase?
+  message   String
+  value     Float? // the measured value that triggered the alert
+  threshold Float? // the configured threshold that was crossed
+
+  timestamp DateTime @default(now())
+
+  acknowledgedById String?
+  acknowledgedBy   User?     @relation("AlertAcknowledgedBy", fields: [acknowledgedById], references: [id])
+  acknowledgedAt   DateTime?
+
+  resolvedAt DateTime?
+  createdAt  DateTime  @default(now())
+
+  tickets Ticket[]
+
+  @@index([deviceId, status])
+  @@index([deviceId, timestamp])
+  @@index([severity])
+}
+
+model EnergySummary {
+  id       String @id @default(cuid())
+  deviceId String
+  device   Device @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+
+  period      SummaryPeriod
+  periodStart DateTime
+  periodEnd   DateTime
+
+  energyR     Float
+  energyY     Float
+  energyB     Float
+  totalEnergy Float
+
+  avgPowerFactor Float
+  avgVoltage     Float
+  avgCurrent     Float
+  peakPower      Float
+  minVoltage     Float
+  maxVoltage     Float
+
+  createdAt DateTime @default(now())
+
+  @@unique([deviceId, period, periodStart])
+  @@index([deviceId, period, periodStart])
+}
+
+model SystemConfig {
+  id       String @id @default(cuid())
+  deviceId String @unique
+  device   Device @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+
+  maxVoltage     Float @default(250)
+  minVoltage     Float @default(200)
+  maxCurrent     Float @default(32)
+  maxPower       Float @default(7000)
+  maxImbalance   Float @default(10) // %
+  minPowerFactor Float @default(0.85)
+
+  notifyHighVoltage   Boolean @default(true)
+  notifyLowVoltage    Boolean @default(true)
+  notifyOvercurrent   Boolean @default(true)
+  notifyImbalance     Boolean @default(true)
+  notifyPoorPF        Boolean @default(true)
+  notifyDeviceOffline Boolean @default(true)
+
+  updatedAt DateTime @updatedAt
+  createdAt DateTime @default(now())
+}
+
+/// An ESP32 that has announced itself (deviceIdentifier + the Wi-Fi network
+/// it's connected to) via the shared-secret `/api/devices/announce` endpoint,
+/// but hasn't yet been claimed and mapped into a user's utility tree. The
+/// discovered Wi-Fi SSID drives the "map by network" auto-provisioning flow:
+/// claiming a pending device either creates a new utility/sub-utility named
+/// after the network, or attaches it to an existing one.
+model PendingDevice {
+  id               String  @id @default(cuid())
+  deviceIdentifier String  @unique
+  wifiSsid         String
+  firmwareVersion  String?
+
+  claimed              Boolean   @default(false)
+  claimedByUserId      String?
+  claimedBy            User?     @relation("PendingDeviceClaimedBy", fields: [claimedByUserId], references: [id])
+  claimedUtilityNodeId String?
+  claimedAt            DateTime?
+
+  lastAnnouncedAt DateTime @default(now())
+  createdAt       DateTime @default(now())
+
+  @@index([claimed, lastAnnouncedAt])
+}

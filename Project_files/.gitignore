@@ -1,0 +1,43 @@
+# Dependencies
+node_modules/
+**/node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Next.js Build
+.next/
+**/.next/
+out/
+dist/
+build/
+*.tsbuildinfo
+
+# Embedded Postgres / Databases
+.embedded-pg/
+**/.embedded-pg/
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
+
+# Environment Variables & Secrets
+.env
+.env*.local
+*.env
+!.env.example
+
+# IDE & OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# C / C++ / Embedded build artifacts
+*.o
+*.obj
+*.d
+*.bin
+*.hex
+*.elf
+.pio/

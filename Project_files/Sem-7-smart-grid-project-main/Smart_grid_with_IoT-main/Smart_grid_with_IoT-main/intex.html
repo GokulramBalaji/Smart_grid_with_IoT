@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>SmartGrid Monitor</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+:root{
+    --bg:#f5f5f7;--card:#fff;--text:#1d1d1f;--muted:#6e6e73;
+    --line:#e5e5ea;--blue:#0071e3;--green:#248a3d;
+    --orange:#ff9500;--red:#ff3b30;--shadow:0 8px 30px rgba(0,0,0,.06);
+}
+[data-theme="dark"]{
+    --bg:#111;--card:#1c1c1e;--text:#f5f5f7;--muted:#aaa;
+    --line:#333;--shadow:none;
+}
+*{box-sizing:border-box}
+body{
+    margin:0;background:var(--bg);color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+}
+.sidebar{
+    position:fixed;width:250px;height:100vh;background:var(--card);
+    border-right:1px solid var(--line);padding:25px 14px;z-index:10;
+}
+.logo{font-size:22px;font-weight:800;padding:10px 14px 30px}
+.nav{
+    padding:12px 14px;margin:5px 0;border-radius:12px;
+    cursor:pointer;color:var(--muted)
+}
+.nav:hover,.nav.active{background:var(--bg);color:var(--text)}
+.bottom{position:absolute;bottom:20px;left:14px;right:14px}
+main{margin-left:250px;padding:35px;max-width:1700px}
+.page{display:none}.page.active{display:block}
+h1{margin:0;font-size:32px}h2{margin:30px 0 16px}
+.subtitle{color:var(--muted);margin:8px 0 25px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:16px}
+.phase-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:18px}
+.card{
+    background:var(--card);border:1px solid var(--line);border-radius:20px;
+    padding:22px;box-shadow:var(--shadow)
+}
+.label{font-size:13px;color:var(--muted);margin-bottom:8px}
+.big{font-size:29px;font-weight:750}
+input,select{
+    width:100%;padding:11px;border-radius:10px;border:1px solid var(--line);
+    background:var(--bg);color:var(--text);margin-top:5px
+}
+label{display:block;font-size:13px;color:var(--muted);margin-top:12px}
+button{
+    border:0;border-radius:12px;padding:11px 17px;margin:5px;
+    cursor:pointer;background:var(--blue);color:white;font-weight:600
+}
+button.secondary{background:var(--bg);color:var(--text);border:1px solid var(--line)}
+button.warn{background:var(--orange)}button.danger{background:var(--red)}
+.row{display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid var(--line)}
+.row:last-child{border:0}
+.good{color:var(--green)}.warning{color:var(--orange)}.danger-text{color:var(--red)}
+.status{
+    display:inline-block;padding:7px 12px;border-radius:99px;
+    background:#e9f8ee;color:var(--green);font-size:13px;font-weight:600
+}
+.chart{height:350px}
+.toolbar{display:flex;flex-wrap:wrap;gap:5px;margin:15px 0}
+.alert{
+    padding:13px;border-left:4px solid var(--orange);background:var(--card);
+    margin:8px 0;border-radius:8px
+}
+.alert.critical{border-color:var(--red)}
+.alert.good-alert{border-color:var(--green)}
+.health{
+    width:150px;height:150px;border-radius:50%;margin:20px auto;
+    display:flex;align-items:center;justify-content:center;
+    font-size:34px;font-weight:bold;border:12px solid var(--blue)
+}
+.badge{padding:4px 8px;border-radius:99px;font-size:12px;background:var(--bg)}
+.formula{background:var(--bg);padding:15px;border-radius:12px;font-family:monospace;margin:10px 0}
+.search{max-width:500px;margin-bottom:20px}
+.hidden{display:none}
+@media(max-width:800px){
+    .sidebar{position:relative;width:100%;height:auto;display:flex;overflow:auto;padding:10px}
+    .logo{padding:8px;white-space:nowrap}.nav{white-space:nowrap}
+    .bottom{position:relative;bottom:auto;left:auto;right:auto}
+    main{margin:0;padding:18px}
+}
+</style>
+
+</head>
+
+<body>
+
+<aside class="sidebar">
+    <div class="logo">⚡ SmartGrid</div>
+
+```
+<div class="nav active" onclick="showPage('analysis',this)">🧮 Analysis</div>
+<div class="nav" onclick="showPage('simulation',this)">📊 Simulation</div>
+<div class="nav" onclick="showPage('formulas',this)">📐 Formulas</div>
+
+<div class="bottom">
+    <div class="nav" onclick="showPage('settings',this)">⚙ Settings</div>
+    <div class="nav" onclick="toggleTheme()">◐ Theme</div>
+</div>
+```
+
+</aside>
+
+<main>
+
+<!-- ================= ANALYSIS ================= -->
+
+<section id="analysis" class="page active">
+<h1>Three-Phase Analysis</h1>
+<p class="subtitle">Enter custom PZEM readings and perform complete electrical analysis.</p>
+
+<div class="phase-grid">
+<div class="card">
+<h2>Phase R</h2>
+<label>Voltage (V)<input id="rV" type="number" value="230"></label>
+<label>Current (A)<input id="rI" type="number" value="5"></label>
+<label>Power Factor<input id="rPF" type="number" step=".01" value=".95"></label>
+<label>Frequency (Hz)<input id="rF" type="number" value="50"></label>
+<label>Energy Reading (kWh)<input id="rE" type="number" value="10"></label>
+</div>
+
+<div class="card">
+<h2>Phase Y</h2>
+<label>Voltage (V)<input id="yV" type="number" value="230"></label>
+<label>Current (A)<input id="yI" type="number" value="4"></label>
+<label>Power Factor<input id="yPF" type="number" step=".01" value=".90"></label>
+<label>Frequency (Hz)<input id="yF" type="number" value="50"></label>
+<label>Energy Reading (kWh)<input id="yE" type="number" value="12"></label>
+</div>
+
+<div class="card">
+<h2>Phase B</h2>
+<label>Voltage (V)<input id="bV" type="number" value="230"></label>
+<label>Current (A)<input id="bI" type="number" value="6"></label>
+<label>Power Factor<input id="bPF" type="number" step=".01" value=".94"></label>
+<label>Frequency (Hz)<input id="bF" type="number" value="50"></label>
+<label>Energy Reading (kWh)<input id="bE" type="number" value="15"></label>
+</div>
+</div>
+
+<div class="toolbar">
+<button onclick="calculate()">Calculate Live</button>
+<button class="secondary" onclick="saveScenario()">💾 Save Scenario</button>
+<button class="secondary" onclick="loadScenario()">📂 Load Scenario</button>
+<button class="secondary" onclick="sampleData()">✨ Sample Data</button>
+<button class="secondary" onclick="resetInputs()">↺ Reset</button>
+<button class="secondary" onclick="exportCSV()">⬇ Export CSV</button>
+</div>
+
+<h2>System Overview</h2>
+<div class="grid">
+<div class="card"><div class="label">Average Voltage</div><div class="big" id="avgV">--</div></div>
+<div class="card"><div class="label">Total Current</div><div class="big" id="totalI">--</div></div>
+<div class="card"><div class="label">Total Active Power</div><div class="big" id="totalP">--</div></div>
+<div class="card"><div class="label">Total Energy</div><div class="big" id="totalE">--</div></div>
+<div class="card"><div class="label">Overall Power Factor</div><div class="big" id="overallPF">--</div></div>
+<div class="card"><div class="label">Voltage Imbalance</div><div class="big" id="vImbalance">--</div></div>
+<div class="card"><div class="label">Current Imbalance</div><div class="big" id="iImbalance">--</div></div>
+<div class="card"><div class="label">System Status</div><div class="big" id="status">--</div></div>
+</div>
+
+<h2>Phase Results</h2>
+<div class="phase-grid">
+<div class="card"><h2>R</h2><div id="rResult"></div></div>
+<div class="card"><h2>Y</h2><div id="yResult"></div></div>
+<div class="card"><h2>B</h2><div id="bResult"></div></div>
+</div>
+
+<h2>System Health</h2>
+<div class="card">
+<div class="health" id="health">--</div>
+<div style="text-align:center" id="healthText">Run analysis to calculate health.</div>
+</div>
+
+<h2>Load Distribution</h2>
+<div class="card chart"><canvas id="loadChart"></canvas></div>
+
+<h2>Smart Recommendations</h2>
+<div class="card" id="recommendations">Run analysis to generate recommendations.</div>
+
+<h2>Alert Center</h2>
+<div class="card" id="manualAlerts">No analysis yet.</div>
+</section>
+
+<!-- ================= SIMULATION ================= -->
+
+<section id="simulation" class="page">
+<h1>ESP32 + 3 PZEM Simulation</h1>
+<p class="subtitle">Simulated real-time sensor behaviour, faults and energy accumulation.</p>
+
+<div class="toolbar">
+<span class="status" id="deviceStatus">● ESP32 Online</span>
+<button onclick="startSim()">▶ Start</button>
+<button class="secondary" onclick="pauseSim()">⏸ Pause</button>
+<button class="secondary" onclick="resetSim()">↺ Reset</button>
+
+<select id="speed" onchange="changeSpeed()">
+<option value="1000">1× Speed</option>
+<option value="500">2× Speed</option>
+<option value="200">5× Speed</option>
+</select>
+</div>
+
+<h2>Inject Disturbance</h2>
+<div class="toolbar">
+<button class="warn" onclick="injectFault('overvoltage')">High Voltage</button>
+<button class="warn" onclick="injectFault('undervoltage')">Low Voltage</button>
+<button class="warn" onclick="injectFault('overcurrent')">Over Current</button>
+<button class="warn" onclick="injectFault('poorPF')">Poor PF</button>
+<button class="danger" onclick="injectFault('phaseFailure')">Phase Failure</button>
+<button class="warn" onclick="injectFault('frequency')">Frequency Fault</button>
+<button class="warn" onclick="injectFault('imbalance')">Load Imbalance</button>
+<button class="secondary" onclick="injectFault('offline')">ESP32 Offline</button>
+</div>
+
+<div class="grid">
+<div class="card"><div class="label">Average Voltage</div><div class="big" id="simV">--</div></div>
+<div class="card"><div class="label">Total Current</div><div class="big" id="simI">--</div></div>
+<div class="card"><div class="label">Total Power</div><div class="big" id="simP">--</div></div>
+<div class="card"><div class="label">Accumulated Energy</div><div class="big" id="simE">--</div></div>
+<div class="card"><div class="label">Health</div><div class="big" id="simHealth">--</div></div>
+<div class="card"><div class="label">PZEM Status</div><div id="pzemStatus">R 🟢 &nbsp; Y 🟢 &nbsp; B 🟢</div></div>
+</div>
+
+<div class="phase-grid">
+<div class="card"><h2>Phase R</h2><div id="simR"></div></div>
+<div class="card"><h2>Phase Y</h2><div id="simY"></div></div>
+<div class="card"><h2>Phase B</h2><div id="simB"></div></div>
+</div>
+
+<h2>Real-Time Electrical Trends</h2>
+<div class="card chart"><canvas id="simChart"></canvas></div>
+
+<h2>Simulation Events</h2>
+<div class="card" id="eventLog">Simulation initialized.</div>
+</section>
+
+<!-- ================= FORMULAS ================= -->
+
+<section id="formulas" class="page">
+<h1>Formula & Learning Center</h1>
+<p class="subtitle">Search formulas, understand variables and use your own values.</p>
+
+<input class="search" id="formulaSearch" placeholder="Search voltage, power, imbalance..." oninput="filterFormulas()">
+
+<div id="formulaList">
+
+<div class="card formula-card" data-search="apparent power voltage current">
+<h2>Apparent Power</h2>
+<div class="formula">S = V × I</div>
+<p>S = apparent power (VA), V = voltage (V), I = current (A).</p>
+</div>
+
+<div class="card formula-card" data-search="active real power pf">
+<h2>Active Power</h2>
+<div class="formula">P = V × I × PF</div>
+<p>PF is the power factor. Result is in watts.</p>
+</div>
+
+<div class="card formula-card" data-search="reactive power var">
+<h2>Reactive Power</h2>
+<div class="formula">Q = √(S² − P²)</div>
+<p>Q is reactive power in VAR.</p>
+</div>
+
+<div class="card formula-card" data-search="power factor">
+<h2>Power Factor</h2>
+<div class="formula">PF = P / S</div>
+<p>Ratio of active power to apparent power.</p>
+</div>
+
+<div class="card formula-card" data-search="energy kwh time">
+<h2>Energy</h2>
+<div class="formula">E(kWh) = P(W) × t(hours) / 1000</div>
+<p>Energy is power consumed over time.</p>
+</div>
+
+<div class="card formula-card" data-search="three phase total power">
+<h2>Total Active Power</h2>
+<div class="formula">Ptotal = PR + PY + PB</div>
+</div>
+
+<div class="card formula-card" data-search="voltage imbalance">
+<h2>Voltage Imbalance</h2>
+<div class="formula">Imbalance % = MAX(|Vphase − Vavg|) / Vavg × 100</div>
+<div class="formula">Vavg = (VR + VY + VB) / 3</div>
+</div>
+
+<div class="card formula-card" data-search="current imbalance load">
+<h2>Current Imbalance</h2>
+<div class="formula">Imbalance % = MAX(|Iphase − Iavg|) / Iavg × 100</div>
+</div>
+
+<div class="card formula-card" data-search="load distribution percentage">
+<h2>Phase Load Distribution</h2>
+<div class="formula">Phase Load % = Phase Power / Total Power × 100</div>
+</div>
+
+<div class="card formula-card" data-search="overall power factor">
+<h2>Overall Power Factor</h2>
+<div class="formula">PFoverall = Ptotal / Stotal</div>
+</div>
+
+</div>
+
+<h2>Interactive Formula Calculator</h2>
+<div class="phase-grid">
+<div class="card">
+<label>Voltage<input id="calcV" type="number" value="230"></label>
+<label>Current<input id="calcI" type="number" value="5"></label>
+<label>Power Factor<input id="calcPF" type="number" step=".01" value=".95"></label>
+<button onclick="formulaCalculate()">Calculate</button>
+<div id="formulaOutput"></div>
+</div>
+
+<div class="card">
+<h2>Quick Theory</h2>
+<div class="formula">Power Triangle: S² = P² + Q²</div>
+<p class="subtitle">Active power performs useful work. Reactive power supports magnetic and electric fields. Apparent power represents the combined electrical demand.</p>
+</div>
+</div>
+</section>
+
+<!-- ================= SETTINGS ================= -->
+
+<section id="settings" class="page">
+<h1>System Settings</h1>
+<p class="subtitle">Configure alert thresholds used by analysis.</p>
+
+<div class="phase-grid">
+<div class="card">
+<label>Minimum Voltage<input id="minVoltage" type="number" value="200"></label>
+<label>Maximum Voltage<input id="maxVoltage" type="number" value="250"></label>
+<label>Maximum Current Imbalance (%)<input id="maxImbalance" type="number" value="10"></label>
+<label>Minimum Power Factor<input id="minPF" type="number" step=".01" value=".90"></label>
+<button onclick="saveSettings()">Save Settings</button>
+</div>
+
+<div class="card">
+<h2>Device</h2>
+<div class="row"><span>ESP32</span><b class="good">Online</b></div>
+<div class="row"><span>PZEM R</span><b class="good">Connected</b></div>
+<div class="row"><span>PZEM Y</span><b class="good">Connected</b></div>
+<div class="row"><span>PZEM B</span><b class="good">Connected</b></div>
+</div>
+</div>
+</section>
+
+</main>
+
+<script>
+/* ================= GLOBAL ================= */
+function showPage(id,el){
+    document.querySelectorAll(".page").forEach(x=>x.classList.remove("active"));
+    document.getElementById(id).classList.add("active");
+    document.querySelectorAll(".nav").forEach(x=>x.classList.remove("active"));
+    if(el) el.classList.add("active");
+}
+function toggleTheme(){
+    document.body.dataset.theme=document.body.dataset.theme==="dark"?"light":"dark";
+}
+function n(id){return Number(document.getElementById(id).value)||0}
+function row(name,value){return `<div class="row"><span>${name}</span><b>${value}</b></div>`}
+
+let settings={minV:200,maxV:250,maxImbalance:10,minPF:.9};
+if(localStorage.smartgridSettings){
+    settings=JSON.parse(localStorage.smartgridSettings);
+    document.getElementById("minVoltage").value=settings.minV;
+    document.getElementById("maxVoltage").value=settings.maxV;
+    document.getElementById("maxImbalance").value=settings.maxImbalance;
+    document.getElementById("minPF").value=settings.minPF;
+}
+
+/* ================= MANUAL ANALYSIS ================= */
+function phase(prefix){
+    let V=n(prefix+"V"),I=n(prefix+"I"),PF=n(prefix+"PF"),F=n(prefix+"F"),E=n(prefix+"E");
+    PF=Math.max(0,Math.min(1,PF));
+    let S=V*I,P=S*PF,Q=Math.sqrt(Math.max(0,S*S-P*P));
+    return {V,I,PF,F,E,S,P,Q};
+}
+let loadChart;
+
+function calculate(){
+    let R=phase("r"),Y=phase("y"),B=phase("b"),ps=[R,Y,B];
+
+    function display(id,p){
+        document.getElementById(id).innerHTML=
+        row("Voltage",p.V.toFixed(2)+" V")+
+        row("Current",p.I.toFixed(2)+" A")+
+        row("Active Power",p.P.toFixed(2)+" W")+
+        row("Apparent Power",p.S.toFixed(2)+" VA")+
+        row("Reactive Power",p.Q.toFixed(2)+" VAR")+
+        row("Power Factor",p.PF.toFixed(3))+
+        row("Frequency",p.F.toFixed(2)+" Hz")+
+        row("Energy",p.E.toFixed(3)+" kWh");
+    }
+    display("rResult",R);display("yResult",Y);display("bResult",B);
+
+    let avgV=(R.V+Y.V+B.V)/3,totalI=R.I+Y.I+B.I;
+    let avgI=totalI/3,totalP=R.P+Y.P+B.P,totalS=R.S+Y.S+B.S;
+    let totalE=R.E+Y.E+B.E,overallPF=totalS?totalP/totalS:0;
+
+    let vIm=Math.max(...ps.map(p=>Math.abs(p.V-avgV)))/(avgV||1)*100;
+    let iIm=Math.max(...ps.map(p=>Math.abs(p.I-avgI)))/(avgI||1)*100;
+
+    avgV=avgV||0;
+
+    document.getElementById("avgV").textContent=avgV.toFixed(2)+" V";
+    document.getElementById("totalI").textContent=totalI.toFixed(2)+" A";
+    document.getElementById("totalP").textContent=totalP.toFixed(2)+" W";
+    document.getElementById("totalE").textContent=totalE.toFixed(3)+" kWh";
+    document.getElementById("overallPF").textContent=overallPF.toFixed(3);
+    document.getElementById("vImbalance").textContent=vIm.toFixed(2)+" %";
+    document.getElementById("iImbalance").textContent=iIm.toFixed(2)+" %";
+
+    let alerts=[],score=100,recs=[];
+    ps.forEach((p,i)=>{
+        let name=["R","Y","B"][i];
+        if(p.V<settings.minV){alerts.push(`${name}: Low voltage (${p.V.toFixed(1)} V)`);score-=12;recs.push(`Check supply and connections on Phase ${name}.`)}
+        if(p.V>settings.maxV){alerts.push(`${name}: High voltage (${p.V.toFixed(1)} V)`);score-=12;recs.push(`Investigate overvoltage condition on Phase ${name}.`)}
+        if(p.PF<settings.minPF){alerts.push(`${name}: Poor power factor (${p.PF.toFixed(2)})`);score-=8;recs.push(`Consider power factor correction for Phase ${name}.`)}
+    });
+    if(vIm>2){alerts.push(`Voltage imbalance: ${vIm.toFixed(2)}%`);score-=10;recs.push("Inspect unequal voltage distribution between phases.")}
+    if(iIm>settings.maxImbalance){alerts.push(`Current imbalance: ${iIm.toFixed(2)}%`);score-=15;recs.push("Redistribute loads from the most heavily loaded phase.")}
+    score=Math.max(0,score);
+
+    let status=score>=85?"NORMAL":score>=60?"WARNING":"CRITICAL";
+    let cls=status==="NORMAL"?"good":status==="WARNING"?"warning":"danger-text";
+    let st=document.getElementById("status");st.textContent=status;st.className="big "+cls;
+
+    document.getElementById("health").textContent=score+"%";
+    document.getElementById("health").style.borderColor=score>=85?"#248a3d":score>=60?"#ff9500":"#ff3b30";
+    document.getElementById("healthText").textContent=
+        score>=85?"Electrical parameters are within configured limits.":
+        score>=60?"System requires attention. Review alerts.":"Critical conditions detected.";
+
+    document.getElementById("manualAlerts").innerHTML=
+        alerts.length?alerts.map(x=>`<div class="alert ${status==="CRITICAL"?"critical":""}">${x}</div>`).join(""):
+        `<div class="alert good-alert">No abnormal conditions detected.</div>`;
+
+    let loads=[R.P,Y.P,B.P],maxIndex=loads.indexOf(Math.max(...loads)),minIndex=loads.indexOf(Math.min(...loads));
+    recs.unshift(`Phase ${["R","Y","B"][maxIndex]} carries the highest load; Phase ${["R","Y","B"][minIndex]} carries the lowest.`);
+    document.getElementById("recommendations").innerHTML=recs.map(x=>`<div class="alert">${x}</div>`).join("");
+
+    if(loadChart)loadChart.destroy();
+    loadChart=new Chart(document.getElementById("loadChart"),{
+        type:"bar",
+        data:{labels:["Phase R","Phase Y","Phase B"],datasets:[{label:"Active Power (W)",data:loads}]},
+        options:{responsive:true,maintainAspectRatio:false}
+    });
+}
+
+function sampleData(){
+    let vals={rV:228,rI:4.2,rPF:.94,rF:50,rE:18,yV:234,yI:7.8,yPF:.82,yF:50.1,yE:23,bV:226,bI:5.1,bPF:.96,bF:49.9,bE:20};
+    Object.entries(vals).forEach(([k,v])=>document.getElementById(k).value=v);
+    calculate();
+}
+function resetInputs(){
+    ["r","y","b"].forEach(p=>{
+        document.getElementById(p+"V").value=230;
+        document.getElementById(p+"I").value=5;
+        document.getElementById(p+"PF").value=.95;
+        document.getElementById(p+"F").value=50;
+        document.getElementById(p+"E").value=0;
+    });calculate();
+}
+function saveScenario(){
+    let data={};
+    ["rV","rI","rPF","rF","rE","yV","yI","yPF","yF","yE","bV","bI","bPF","bF","bE"]
+    .forEach(id=>data[id]=document.getElementById(id).value);
+    localStorage.smartgridScenario=JSON.stringify(data);alert("Scenario saved.");
+}
+function loadScenario(){
+    if(!localStorage.smartgridScenario)return alert("No saved scenario.");
+    let d=JSON.parse(localStorage.smartgridScenario);
+    Object.entries(d).forEach(([id,v])=>document.getElementById(id).value=v);calculate();
+}
+function exportCSV(){
+    let rows=[["Phase","Voltage","Current","PowerFactor","Frequency","Energy"]];
+    [["R","r"],["Y","y"],["B","b"]].forEach(([name,p])=>{
+        rows.push([name,n(p+"V"),n(p+"I"),n(p+"PF"),n(p+"F"),n(p+"E")]);
+    });
+    let blob=new Blob([rows.map(x=>x.join(",")).join("\n")],{type:"text/csv"});
+    let a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="smartgrid-analysis.csv";a.click();
+}
+
+/* ================= SIMULATION ================= */
+let sim={
+ R:{V:230,I:5,PF:.95,F:50,E:0},
+ Y:{V:230,I:4.5,PF:.93,F:50,E:0},
+ B:{V:230,I:5.5,PF:.96,F:50,E:0}
+};
+let simTimer=null,deviceOnline=true,simChart;
+
+simChart=new Chart(document.getElementById("simChart"),{
+ type:"line",
+ data:{labels:[],datasets:[
+ {label:"Phase R Power",data:[]},
+ {label:"Phase Y Power",data:[]},
+ {label:"Phase B Power",data:[]}
+ ]},
+ options:{responsive:true,maintainAspectRatio:false,animation:false}
+});
+
+function randomDrift(p){
+    p.V+=(Math.random()-.5)*1.5;
+    p.I=Math.max(0,p.I+(Math.random()-.5)*.3);
+    p.PF=Math.max(.4,Math.min(1,p.PF+(Math.random()-.5)*.01));
+    p.F+=(Math.random()-.5)*.03;
+}
+function simDisplay(id,p,P){
+    document.getElementById(id).innerHTML=
+    row("Voltage",p.V.toFixed(1)+" V")+
+    row("Current",p.I.toFixed(2)+" A")+
+    row("Power",P.toFixed(0)+" W")+
+    row("Power Factor",p.PF.toFixed(2))+
+    row("Frequency",p.F.toFixed(2)+" Hz")+
+    row("Energy",p.E.toFixed(4)+" kWh");
+}
+function updateSim(){
+    if(!deviceOnline)return;
+    Object.values(sim).forEach(randomDrift);
+    let powers=Object.values(sim).map(p=>p.V*p.I*p.PF);
+    Object.values(sim).forEach((p,i)=>p.E+=powers[i]/3600000);
+
+    simDisplay("simR",sim.R,powers[0]);
+    simDisplay("simY",sim.Y,powers[1]);
+    simDisplay("simB",sim.B,powers[2]);
+
+    let ps=Object.values(sim),avgV=ps.reduce((a,p)=>a+p.V,0)/3;
+    let totalI=ps.reduce((a,p)=>a+p.I,0),totalP=powers.reduce((a,b)=>a+b,0);
+    let totalE=ps.reduce((a,p)=>a+p.E,0);
+
+    document.getElementById("simV").textContent=avgV.toFixed(1)+" V";
+    document.getElementById("simI").textContent=totalI.toFixed(2)+" A";
+    document.getElementById("simP").textContent=totalP.toFixed(0)+" W";
+    document.getElementById("simE").textContent=totalE.toFixed(4)+" kWh";
+
+    let health=100;
+    ps.forEach(p=>{
+        if(p.V<200||p.V>250)health-=20;
+        if(p.PF<.8)health-=15;
+        if(p.F<49||p.F>51)health-=15;
+    });
+    health=Math.max(0,health);
+    document.getElementById("simHealth").textContent=health+"%";
+
+    let t=new Date().toLocaleTimeString();
+    simChart.data.labels.push(t);
+    powers.forEach((p,i)=>simChart.data.datasets[i].data.push(p));
+    if(simChart.data.labels.length>30){
+        simChart.data.labels.shift();
+        simChart.data.datasets.forEach(d=>d.data.shift());
+    }
+    simChart.update();
+}
+function startSim(){
+    if(simTimer)return;
+    deviceOnline=true;
+    document.getElementById("deviceStatus").textContent="● ESP32 Online";
+    simTimer=setInterval(updateSim,Number(document.getElementById("speed").value));
+    logEvent("Simulation started.");
+}
+function pauseSim(){clearInterval(simTimer);simTimer=null;logEvent("Simulation paused.");}
+function resetSim(){
+    pauseSim();
+    sim={R:{V:230,I:5,PF:.95,F:50,E:0},Y:{V:230,I:4.5,PF:.93,F:50,E:0},B:{V:230,I:5.5,PF:.96,F:50,E:0}};
+    simChart.data.labels=[];simChart.data.datasets.forEach(d=>d.data=[]);simChart.update();
+    deviceOnline=true;document.getElementById("pzemStatus").textContent="R 🟢   Y 🟢   B 🟢";
+    logEvent("Simulation reset.");
+    updateSim();
+}
+function changeSpeed(){
+    if(simTimer){pauseSim();startSim();}
+}
+function logEvent(text){
+    let box=document.getElementById("eventLog");
+    box.innerHTML=`<div class="alert">${new Date().toLocaleTimeString()} — ${text}</div>`+box.innerHTML;
+}
+function injectFault(type){
+    let p=["R","Y","B"][Math.floor(Math.random()*3)];
+    if(type==="overvoltage"){sim[p].V=270;logEvent(`Overvoltage injected into Phase ${p}.`);}
+    if(type==="undervoltage"){sim[p].V=170;logEvent(`Undervoltage injected into Phase ${p}.`);}
+    if(type==="overcurrent"){sim[p].I=25;logEvent(`Overcurrent injected into Phase ${p}.`);}
+    if(type==="poorPF"){sim[p].PF=.55;logEvent(`Poor PF injected into Phase ${p}.`);}
+    if(type==="phaseFailure"){sim[p].V=0;sim[p].I=0;logEvent(`Phase ${p} failure injected.`);}
+    if(type==="frequency"){sim[p].F=47;logEvent(`Frequency abnormality injected.`);}
+    if(type==="imbalance"){sim.R.I=2;sim.Y.I=3;sim.B.I=15;logEvent("Severe load imbalance injected.");}
+    if(type==="offline"){
+        deviceOnline=false;pauseSim();
+        document.getElementById("deviceStatus").textContent="● ESP32 Offline";
+        document.getElementById("pzemStatus").textContent="R 🔴   Y 🔴   B 🔴";
+        logEvent("ESP32 communication failure injected.");
+    }
+    updateSim();
+}
+
+/* ================= FORMULA ================= */
+function filterFormulas(){
+    let q=document.getElementById("formulaSearch").value.toLowerCase();
+    document.querySelectorAll(".formula-card").forEach(c=>{
+        c.style.display=(c.dataset.search+" "+c.innerText).toLowerCase().includes(q)?"block":"none";
+    });
+}
+function formulaCalculate(){
+    let V=n("calcV"),I=n("calcI"),PF=Math.min(1,Math.max(0,n("calcPF")));
+    let S=V*I,P=S*PF,Q=Math.sqrt(Math.max(0,S*S-P*P));
+    document.getElementById("formulaOutput").innerHTML=
+        row("Apparent Power",S.toFixed(2)+" VA")+
+        row("Active Power",P.toFixed(2)+" W")+
+        row("Reactive Power",Q.toFixed(2)+" VAR");
+}
+
+/* ================= SETTINGS ================= */
+function saveSettings(){
+    settings={
+        minV:n("minVoltage"),
+        maxV:n("maxVoltage"),
+        maxImbalance:n("maxImbalance"),
+        minPF:n("minPF")
+    };
+    localStorage.smartgridSettings=JSON.stringify(settings);
+    calculate();alert("Settings saved.");
+}
+
+/* Initial */
+calculate();
+updateSim();
+</script>
+
+</body>
+</html>
